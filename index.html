@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+
+
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ECF CERCA">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#e8321e">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Schématisation numérique ECF CERCA</title>
+<style>
+/* ═══════════════════════════════════════════
+   RESET & VARIABLES
+═══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+:root{
+  --bg:#f0ede7;
+  --panel:#1c1c1e;
+  --panel2:#2c2c2e;
+  --acc:#e8321e;
+  --blue:#0a7aff;
+  --green:#30b94a;
+  --muted:#8e8e93;
+  --sb:230px;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT : canvas à gauche, sidebar à droite
+═══════════════════════════════════════════ */
+#app{display:flex;width:100vw;height:100dvh;flex-direction:row-reverse;}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR (droite)
+═══════════════════════════════════════════ */
+#sb{
+  width:var(--sb);min-width:var(--sb);
+  background:var(--panel);
+  display:flex;flex-direction:column;
+  z-index:20;
+  box-shadow:-2px 0 18px rgba(0,0,0,.4);
+  transition:width .22s ease,min-width .22s ease;
+  overflow:hidden;
+}
+#sb.hidden{width:0;min-width:0;}
+
+/* Logo */
+.sb-head{
+  padding:12px 14px 10px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:9px;
+  flex-shrink:0;
+}
+.sb-ico{width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,#e8321e,#ff7a00);
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+.sb-name{font-size:.7rem;font-weight:800;letter-spacing:3px;color:var(--acc);}
+.sb-sub{font-size:.52rem;color:var(--muted);}
+
+/* Tabs */
+.sb-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+.sb-tab{
+  flex:1;padding:8px 2px;text-align:center;cursor:pointer;
+  font-size:.52rem;font-weight:700;letter-spacing:.7px;
+  color:var(--muted);border-bottom:2.5px solid transparent;
+  transition:color .12s,border-color .12s;white-space:nowrap;
+}
+.sb-tab.on{color:var(--acc);border-bottom-color:var(--acc);}
+.sb-pane{display:none;flex-direction:column;overflow:hidden;flex:1;}
+.sb-pane.on{display:flex;}
+
+/* Scrollable area inside pane */
+.sb-scroll{overflow-y:auto;flex:1;padding-bottom:8px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;}
+
+/* Section label */
+.lbl{font-size:.52rem;font-weight:700;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;padding:7px 13px 3px;}
+
+/* Tool button */
+.tb{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 13px;border:none;background:transparent;
+  width:100%;text-align:left;
+  color:rgba(255,255,255,.6);font-size:.74rem;font-weight:500;
+  cursor:pointer;transition:background .12s;
+}
+.tb:hover{background:rgba(255,255,255,.055);color:#fff;}
+.tb.on{background:rgba(232,50,30,.16);color:var(--acc);}
+.tb-i{
+  width:26px;height:26px;border-radius:6px;
+  background:rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;flex-shrink:0;
+}
+.tb.on .tb-i{background:rgba(232,50,30,.22);}
+
+/* Color grid */
+.cg{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:4px 13px;}
+.cd{
+  width:100%;aspect-ratio:1;border-radius:50%;cursor:pointer;
+  border:2.5px solid transparent;transition:transform .12s,border-color .12s;
+}
+.cd:hover{transform:scale(1.2);}
+.cd.on{border-color:#fff;transform:scale(1.06);}
+
+/* Stroke row */
+.sr{display:flex;gap:5px;padding:4px 13px;}
+.so{
+  flex:1;height:26px;border-radius:5px;
+  background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .12s;
+}
+.so:hover{background:rgba(255,255,255,.14);}
+.so.on{background:rgba(232,50,30,.26);}
+.sl{background:#fff;border-radius:2px;width:62%;}
+
+/* Element button */
+.eb{
+  display:flex;align-items:center;gap:8px;padding:6px 13px;
+  border:none;background:transparent;color:rgba(255,255,255,.62);
+  font-size:.72rem;cursor:pointer;transition:background .12s;
+  width:100%;text-align:left;
+}
+.eb:hover{background:rgba(255,255,255,.055);color:#fff;}
+.ei{font-size:1.05rem;width:22px;text-align:center;flex-shrink:0;}
+.ec{padding:6px 13px 2px;font-size:.52rem;font-weight:700;
+  letter-spacing:1.5px;color:rgba(255,255,255,.26);
+  text-transform:uppercase;margin-top:3px;}
+
+/* Scenario cards */
+.sc-sec{font-size:.52rem;font-weight:700;letter-spacing:1.5px;
+  color:rgba(255,255,255,.3);text-transform:uppercase;
+  padding:8px 13px 4px;margin-top:4px;}
+.sc-card{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 13px;border:none;background:transparent;
+  color:rgba(255,255,255,.7);font-size:.72rem;cursor:pointer;
+  transition:background .12s;width:100%;text-align:left;
+}
+.sc-card:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sc-ico{font-size:1.2rem;flex-shrink:0;}
+.sc-info{display:flex;flex-direction:column;gap:1px;}
+.sc-name{font-size:.72rem;font-weight:600;}
+.sc-desc{font-size:.6rem;color:var(--muted);}
+
+/* Bottom export buttons */
+.sb-foot{
+  padding:10px 13px;
+  border-top:1px solid rgba(255,255,255,.07);
+  display:flex;flex-direction:column;gap:6px;
+  flex-shrink:0;
+}
+.xbtn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 10px;border-radius:8px;border:none;
+  font-size:.74rem;font-weight:600;cursor:pointer;transition:all .12s;
+}
+.xbtn.png{background:rgba(255,255,255,.1);color:#fff;}
+.xbtn.png:hover{background:rgba(255,255,255,.18);}
+.xbtn.pdf{background:rgba(232,50,30,.22);color:#ff6b5e;}
+.xbtn.pdf:hover{background:rgba(232,50,30,.35);color:#fff;}
+.xbtn.doc{background:rgba(10,122,255,.22);color:#60aeff;}
+.xbtn.doc:hover{background:rgba(10,122,255,.35);color:#fff;}
+.xbtn-row{display:flex;gap:6px;}
+.xbtn-row .xbtn{flex:1;}
+
+/* ═══════════════════════════════════════════
+   CANVAS AREA
+═══════════════════════════════════════════ */
+#cWrap{
+  flex:1;position:relative;background:var(--bg);overflow:hidden;
+  min-width:0;
+}
+#c{position:absolute;top:0;left:0;touch-action:none;}
+
+/* ═══════════════════════════════════════════
+   TOP-LEFT HUD (remplace la topbar)
+═══════════════════════════════════════════ */
+#hud{
+  position:absolute;top:10px;left:10px;
+  display:flex;align-items:center;gap:6px;
+  z-index:15;pointer-events:auto;
+}
+.hbtn{
+  background:rgba(28,28,30,.82);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.1);
+  color:#fff;border-radius:9px;
+  padding:6px 10px;font-size:.72rem;font-weight:600;
+  cursor:pointer;transition:background .12s;
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.hbtn:hover{background:rgba(60,60,65,.9);}
+.hbtn.red{color:#ff6b5e;}
+.hbtn.red:hover{background:rgba(232,50,30,.35);}
+#hudTitle{
+  background:rgba(28,28,30,.72);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--muted);border-radius:9px;
+  padding:6px 12px;font-size:.7rem;font-weight:600;
+  font-family:'SF Mono',monospace;pointer-events:none;
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* selection actions */
+#selHud{
+  position:absolute;top:10px;right:calc(var(--sb) + 10px);
+  display:none;align-items:center;gap:5px;z-index:15;
+}
+#selHud.show{display:flex;}
+
+/* ═══════════════════════════════════════════
+   MOBILE OVERLAY SIDEBAR
+═══════════════════════════════════════════ */
+#sbOv{display:none;position:fixed;inset:0;z-index:15;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(3px);}
+#sbOv.show{display:block;}
+
+@media(max-width:680px){
+  :root{--sb:0px;}
+  #sb{
+    position:fixed;top:0;right:0;height:100dvh;
+    width:240px;min-width:240px;
+    transform:translateX(100%);
+    transition:transform .22s ease;
+  }
+  #sb.open{transform:translateX(0);}
+  #selHud{right:10px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════════════════════════════
+     SIDEBAR DROITE
+══════════════════════════════════════ -->
+<div id="sb">
+  <div class="sb-head">
+    <img src="data:image/png;base64,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" style="height:30px;width:auto;flex-shrink:0;object-fit:contain;" alt="ECF">
+    <div>
+      <div class="sb-name" style="font-size:.6rem;letter-spacing:1.5px;">ECF CERCA</div>
+      <div class="sb-sub">Schématisation numérique</div>
+    </div>
+  </div>
+
+  <div class="sb-tabs">
+    <div class="sb-tab on"  id="sbt-tools"    onclick="sbTab('tools')">OUTILS</div>
+    <div class="sb-tab"     id="sbt-elems"    onclick="sbTab('elems')">ÉLÉMENTS</div>
+    <div class="sb-tab"     id="sbt-scenes"   onclick="sbTab('scenes')">SCÉNARIOS</div>
+  </div>
+
+  <!-- ── ONGLET OUTILS ── -->
+  <div class="sb-pane on" id="sbp-tools">
+    <div class="sb-scroll">
+      <div class="lbl">Dessin</div>
+      <button class="tb on" id="tool-select"    onclick="setTool('select')">   <div class="tb-i">↖</div>Sélection / déplacer</button>
+      <button class="tb"    id="tool-pen"       onclick="setTool('pen')">      <div class="tb-i">✏️</div>Crayon libre</button>
+      <button class="tb"    id="tool-road"      onclick="setTool('road')">     <div class="tb-i">🛣️</div>Route droite</button>
+      <button class="tb"    id="tool-roadcurve" onclick="setTool('roadcurve')"><div class="tb-i">↩️</div>Route courbe</button>
+      <button class="tb"    id="tool-arrow"     onclick="setTool('arrow')">    <div class="tb-i">➡️</div>Flèche de sens</button>
+      <button class="tb"    id="tool-dasharrow" onclick="setTool('dasharrow')"><div class="tb-i">⤳</div>Flèche pointillée</button>
+      <button class="tb"    id="tool-zone"      onclick="setTool('zone')">     <div class="tb-i">⬛</div>Zone / rectangle</button>
+      <button class="tb"    id="tool-circle"    onclick="setTool('circle')">   <div class="tb-i">⭕</div>Cercle</button>
+      <button class="tb"    id="tool-text"      onclick="setTool('text')">     <div class="tb-i" style="font-weight:800;font-size:.78rem">T</div>Texte</button>
+      <button class="tb"    id="tool-erase"     onclick="setTool('erase')">    <div class="tb-i">🧹</div>Gomme</button>
+      <button class="tb"    id="tool-number"    onclick="setTool('number')">   <div class="tb-i" style="font-weight:800;font-size:.82rem;color:var(--acc)">①</div>Numérotation</button>
+      <button class="tb" onclick="stepCounter=1;toast('Compteur remis à 1')" style="padding-left:47px;color:rgba(255,255,255,.35);font-size:.66rem;">↺ Remettre à 1</button>
+
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:4px;padding-top:2px;">
+        <div class="lbl">Couleur du tracé</div>
+        <div class="cg" id="cGrid">
+          <div class="cd on" style="background:#1c1c1e"                          data-c="#1c1c1e"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#e8321e"                          data-c="#e8321e"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#0a7aff"                          data-c="#0a7aff"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#30b94a"                          data-c="#30b94a"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#f08000"                          data-c="#f08000"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#f5c800"                          data-c="#f5c800"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#fff;border:1px solid #555"       data-c="#ffffff"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#5ac8fa"                          data-c="#5ac8fa"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#af52de"                          data-c="#af52de"              onclick="setColor(this)"></div>
+          <div class="cd"    style="background:#636366"                          data-c="#636366"              onclick="setColor(this)"></div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:2px;">
+        <div class="lbl">Épaisseur</div>
+        <div class="sr">
+          <div class="so on" data-s="2"  onclick="setSz(this)"><div class="sl" style="height:2px"></div></div>
+          <div class="so"    data-s="4"  onclick="setSz(this)"><div class="sl" style="height:4px"></div></div>
+          <div class="so"    data-s="8"  onclick="setSz(this)"><div class="sl" style="height:8px"></div></div>
+          <div class="so"    data-s="16" onclick="setSz(this)"><div class="sl" style="height:12px"></div></div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:2px;">
+        <div class="lbl">Remplissage</div>
+        <div class="cg" id="fGrid">
+          <div class="cd" style="background:transparent;border:1px dashed #555;font-size:.56rem;line-height:26px;text-align:center;color:#666" data-f="none"                  onclick="setFill(this)">∅</div>
+          <div class="cd on" style="background:rgba(58,58,60,.15)"    data-f="rgba(58,58,60,.15)"    onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(200,230,192,.55)"  data-f="rgba(200,230,192,.55)" onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(232,50,30,.15)"    data-f="rgba(232,50,30,.15)"   onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(10,122,255,.15)"   data-f="rgba(10,122,255,.15)"  onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(245,200,0,.3)"     data-f="rgba(245,200,0,.3)"    onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(175,82,222,.2)"    data-f="rgba(175,82,222,.2)"   onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(240,128,0,.2)"     data-f="rgba(240,128,0,.2)"    onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(90,200,250,.25)"   data-f="rgba(90,200,250,.25)"  onclick="setFill(this)"></div>
+          <div class="cd"    style="background:rgba(175,150,125,.4)"   data-f="rgba(175,150,125,.4)"  onclick="setFill(this)"></div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding:6px 0;">
+        <button class="tb" onclick="undo()" style="color:rgba(255,255,255,.5)"><div class="tb-i">↩</div>Annuler</button>
+        <button class="tb" onclick="redo()" style="color:rgba(255,255,255,.5)"><div class="tb-i">↪</div>Rétablir</button>
+        <button class="tb" onclick="toggleGrid()" id="btnGrid" style="color:rgba(255,255,255,.5)"><div class="tb-i">⊞</div>Grille</button>
+        <button class="tb" onclick="clearAll()" style="color:#ff6b5e"><div class="tb-i">🗑</div>Tout effacer</button>
+      </div>
+    </div>
+
+    <!-- Export buttons at bottom -->
+    <div class="sb-foot">
+      <div class="lbl" style="padding:0 0 4px">Exporter</div>
+      <button class="xbtn png" onclick="exportPNG()">🖼 PNG</button>
+      <div class="xbtn-row">
+        <button class="xbtn pdf" onclick="exportPDF()">📄 PDF</button>
+        <button class="xbtn doc" onclick="exportWord()">📝 Word</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ONGLET ÉLÉMENTS ── -->
+  <div class="sb-pane" id="sbp-elems">
+    <div class="sb-scroll">
+      <div class="ec">🚗 Véhicules</div>
+      <button class="eb" onclick="placeEl('🚗','Voiture')">      <span class="ei">🚗</span>Voiture</button>
+      <button class="eb" onclick="placeEl('🚛','Camion')">       <span class="ei">🚛</span>Camion</button>
+      <button class="eb" onclick="placeEl('🏍️','Moto')">         <span class="ei">🏍️</span>Moto</button>
+      <button class="eb" onclick="placeEl('🚌','Bus')">          <span class="ei">🚌</span>Bus</button>
+      <button class="eb" onclick="placeEl('🚲','Vélo')">         <span class="ei">🚲</span>Vélo</button>
+      <button class="eb" onclick="placeEl('🚶','Piéton')">       <span class="ei">🚶</span>Piéton</button>
+      <button class="eb" onclick="placeEl('🚑','Ambulance')">    <span class="ei">🚑</span>Ambulance</button>
+      <button class="eb" onclick="placeEl('🚓','Police')">       <span class="ei">🚓</span>Police</button>
+
+      <div class="ec">⚖️ Panneaux priorité</div>
+      <button class="eb" onclick="placeS('sign_prio_route')"> <span class="ei">🟡</span>Route prioritaire</button>
+      <button class="eb" onclick="placeS('sign_cede')">       <span class="ei">🔺</span>Cédez le passage</button>
+      <button class="eb" onclick="placeS('sign_stop')">       <span class="ei">🛑</span>STOP</button>
+      <button class="eb" onclick="placeS('sign_prio_droite')"><span class="ei">➕</span>Priorité à droite</button>
+      <button class="eb" onclick="placeS('sign_st_andre')">   <span class="ei">✕</span>Triangle St-André (prior. droite)</button>
+
+      <div class="ec">🚶 Voirie</div>
+      <button class="eb" onclick="placeS('passage_pieton')">  <span class="ei">🦓</span>Passage piéton</button>
+
+      <div class="ec">🔄 Giratoire</div>
+      <button class="eb" onclick="placeS('sign_gira')">     <span class="ei">🔄</span>Panneau giratoire</button>
+      <button class="eb" onclick="placeS('sign_cede_gira')"><span class="ei">◀</span>Cédez à l'entrée</button>
+
+      <div class="ec">🅿️ Stationnement</div>
+      <button class="eb" onclick="placeS('park_ok')">      <span class="ei">🅿️</span>Autorisé</button>
+      <button class="eb" onclick="placeS('park_no')">      <span class="ei">🚫</span>Interdit</button>
+      <button class="eb" onclick="placeS('park_handicap')"><span class="ei">♿</span>PMR</button>
+      <button class="eb" onclick="placeS('park_payant')">  <span class="ei">💳</span>Payant</button>
+
+      <div class="ec">🔧 Mécanique</div>
+      <button class="eb" onclick="placeS('meca_moteur')">    <span class="ei">⚙️</span>Moteur</button>
+      <button class="eb" onclick="placeS('meca_boite')">     <span class="ei">🔩</span>Boîte vitesses</button>
+      <button class="eb" onclick="placeS('meca_embrayage')"> <span class="ei">🦶</span>Embrayage</button>
+      <button class="eb" onclick="placeS('meca_frein')">     <span class="ei">🔴</span>Frein / disque</button>
+      <button class="eb" onclick="placeS('meca_pneu')">      <span class="ei">⭕</span>Roue / pneu</button>
+      <button class="eb" onclick="placeS('meca_batterie')">  <span class="ei">🔋</span>Batterie</button>
+      <button class="eb" onclick="placeS('meca_angle_mort')"><span class="ei">👁️</span>Angle mort</button>
+
+      <div class="ec">🚦 Signalisation</div>
+      <button class="eb" onclick="placeEl('🟢','Feu vert')">  <span class="ei">🟢</span>Feu vert</button>
+      <button class="eb" onclick="placeEl('🟡','Feu orange')"><span class="ei">🟡</span>Feu orange</button>
+      <button class="eb" onclick="placeEl('🔴','Feu rouge')"> <span class="ei">🔴</span>Feu rouge</button>
+
+      <div class="ec">🏙️ Décor</div>
+      <button class="eb" onclick="placeEl('🌳','Arbre')">   <span class="ei">🌳</span>Arbre</button>
+      <button class="eb" onclick="placeEl('🏢','Bâtiment')"><span class="ei">🏢</span>Bâtiment</button>
+      <button class="eb" onclick="placeEl('🏫','École')">   <span class="ei">🏫</span>École</button>
+    </div>
+  </div>
+
+  <!-- ── ONGLET SCÉNARIOS ── -->
+  <div class="sb-pane" id="sbp-scenes">
+    <div class="sb-scroll">
+      <div class="sc-sec">Intersections</div>
+      <button class="sc-card" onclick="loadScene('inter4')">          <span class="sc-ico">✚</span>  <div class="sc-info"><div class="sc-name">Carrefour 4 voies</div>      <div class="sc-desc">Intersection classique</div></div></button>
+      <button class="sc-card" onclick="loadScene('inter3_T_bas')">    <span class="sc-ico">⊥</span>  <div class="sc-info"><div class="sc-name">Carrefour T – route bas</div><div class="sc-desc">Voie montant du bas</div></div></button>
+      <button class="sc-card" onclick="loadScene('inter4_bas')">      <span class="sc-ico">↑✚</span> <div class="sc-info"><div class="sc-name">4 voies – axe bas</div>       <div class="sc-desc">Axe montant surlignné</div></div></button>
+      <button class="sc-card" onclick="loadScene('inter_prio_droite')"><span class="sc-ico">➡️</span><div class="sc-info"><div class="sc-name">Priorité à droite</div>      <div class="sc-desc">Schéma pédagogique</div></div></button>
+
+      <div class="sc-sec">Giratoires</div>
+      <button class="sc-card" onclick="loadScene('gira1')"><span class="sc-ico">🔄</span><div class="sc-info"><div class="sc-name">Giratoire 1 voie</div><div class="sc-desc">Rond-point simple</div></div></button>
+      <button class="sc-card" onclick="loadScene('gira2')"><span class="sc-ico">🔄</span><div class="sc-info"><div class="sc-name">Giratoire 2 voies</div><div class="sc-desc">Double anneau</div></div></button>
+      <button class="sc-card" onclick="loadScene('gira3')"><span class="sc-ico">🔄</span><div class="sc-info"><div class="sc-name">Giratoire 3 voies</div><div class="sc-desc">Grand carrefour</div></div></button>
+
+      <div class="sc-sec">Stationnements</div>
+      <button class="sc-card" onclick="loadScene('park_bataille')"><span class="sc-ico">🅿️</span><div class="sc-info"><div class="sc-name">En bataille</div><div class="sc-desc">Perpendiculaire</div></div></button>
+      <button class="sc-card" onclick="loadScene('park_creneau')"> <span class="sc-ico">🅿️</span><div class="sc-info"><div class="sc-name">En créneau</div> <div class="sc-desc">Parallèle</div></div></button>
+      <button class="sc-card" onclick="loadScene('park_epi')">     <span class="sc-ico">🅿️</span><div class="sc-info"><div class="sc-name">En épi</div>      <div class="sc-desc">Angle 45°</div></div></button>
+
+      <div class="sc-sec">Mécanique</div>
+      <button class="sc-card" onclick="loadScene('meca_chaine')">       <span class="sc-ico">⛓️</span><div class="sc-info"><div class="sc-name">Chaîne cinématique</div>   <div class="sc-desc">Moteur → roues</div></div></button>
+      <button class="sc-card" onclick="loadScene('meca_vue')">          <span class="sc-ico">🔧</span><div class="sc-info"><div class="sc-name">Vue mécanique dessus</div><div class="sc-desc">Organes sur châssis</div></div></button>
+      <button class="sc-card" onclick="loadScene('emb_debraye')">       <span class="sc-ico">🦶</span><div class="sc-info"><div class="sc-name">Embrayage débrayé</div>    <div class="sc-desc">Pédale enfoncée</div></div></button>
+      <button class="sc-card" onclick="loadScene('emb_patinage')">      <span class="sc-ico">🦶</span><div class="sc-info"><div class="sc-name">Point de patinage</div>    <div class="sc-desc">Contact partiel</div></div></button>
+      <button class="sc-card" onclick="loadScene('emb_embraye')">       <span class="sc-ico">🦶</span><div class="sc-info"><div class="sc-name">Embrayage embrayé</div>    <div class="sc-desc">Pédale relâchée</div></div></button>
+
+      <div class="sc-sec">Autres</div>
+      <button class="sc-card" onclick="loadScene('urban')">  <span class="sc-ico">🏙️</span><div class="sc-info"><div class="sc-name">Zone urbaine</div>    <div class="sc-desc">Rue avec trottoirs</div></div></button>
+      <button class="sc-card" onclick="loadScene('highway')"><span class="sc-ico">🛣️</span><div class="sc-info"><div class="sc-name">Route nationale</div>  <div class="sc-desc">Voies doubles</div></div></button>
+      <button class="sc-card" onclick="loadScene('blank')">  <span class="sc-ico">⬜</span><div class="sc-info"><div class="sc-name">Vierge</div>           <div class="sc-desc">Page blanche</div></div></button>
+    </div>
+  </div>
+</div><!-- /sidebar -->
+
+<!-- ══════════════════════════════════════
+     CANVAS AREA
+══════════════════════════════════════ -->
+<div id="cWrap">
+  <canvas id="c"></canvas>
+
+  <!-- HUD haut-gauche -->
+  <div id="hud">
+    <button class="hbtn" id="btnMenu" onclick="toggleSb()" title="Ouvrir/fermer le panneau">☰</button>
+    <div id="hudTitle">Nouveau schéma</div>
+  </div>
+
+  <!-- Actions sur sélection -->
+  <div id="selHud">
+    <button class="hbtn"     onclick="dupSel()" title="Dupliquer">⧉</button>
+    <button class="hbtn"     onclick="rotSel()" title="Rotation">↻</button>
+    <button class="hbtn red" onclick="delSel()" title="Supprimer">✕ Suppr.</button>
+  </div>
+</div>
+
+<!-- Mobile sidebar overlay -->
+<div id="sbOv" onclick="closeSb()"></div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);
+  background:#1c1c1e;color:#fff;font-size:.72rem;padding:5px 16px;border-radius:16px;
+  opacity:0;transition:opacity .3s;z-index:200;pointer-events:none;white-space:nowrap;
+  box-shadow:0 3px 14px rgba(0,0,0,.3);"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W=0, H=0;
+let tool='select', drawColor='#1c1c1e', fillColor='rgba(58,58,60,.15)', strokeSz=2;
+let showGrid=false;
+let stepCounter=1; // numérotation procédurale
+let isDrawing=false, sx=0, sy=0, lx=0, ly=0, curPath=[];
+let elements=[], drawings=[];
+let selEl=null, dragOX=0, dragOY=0, dragging=false;
+let undoStack=[], redoStack=[];
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function init(){
+  resize();
+  window.addEventListener('resize', ()=>{ resize(); redraw(); });
+  setupEvents();
+  loadScene('inter4');
+}
+function resize(){
+  const w=document.getElementById('cWrap');
+  W=w.clientWidth; H=w.clientHeight;
+  canvas.width=W; canvas.height=H;
+  redraw();
+}
+
+// ═══════════════════════════════════════════════════════
+// SIDEBAR TOGGLE
+// ═══════════════════════════════════════════════════════
+const isMob=()=>window.innerWidth<680;
+function toggleSb(){
+  const sb=document.getElementById('sb');
+  if(isMob()){
+    const open=sb.classList.toggle('open');
+    document.getElementById('sbOv').classList.toggle('show',open);
+  } else {
+    sb.classList.toggle('hidden');
+    setTimeout(()=>{ resize(); },230);
+  }
+}
+function closeSb(){
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('sbOv').classList.remove('show');
+}
+function sbTab(n){
+  ['tools','elems','scenes'].forEach(t=>{
+    document.getElementById('sbt-'+t).classList.toggle('on',t===n);
+    document.getElementById('sbp-'+t).classList.toggle('on',t===n);
+  });
+  if(isMob()){ document.getElementById('sb').classList.add('open'); document.getElementById('sbOv').classList.add('show'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════════
+function setTool(t){
+  tool=t;
+  if(t!=='select'){selEl=null;updateSelHud();}
+  // Reset step counter when switching TO number tool
+  if(t==='number') stepCounter=1;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  const el=document.getElementById('tool-'+t);
+  if(el)el.classList.add('on');
+  canvas.style.cursor={select:'default',erase:'cell',text:'text',number:'crosshair'}[t]||'crosshair';
+  redraw();
+  if(isMob())closeSb();
+}
+function setColor(el){drawColor=el.dataset.c;document.querySelectorAll('#cGrid .cd').forEach(d=>d.classList.remove('on'));el.classList.add('on');}
+function setFill(el){fillColor=el.dataset.f;document.querySelectorAll('#fGrid .cd').forEach(d=>d.classList.remove('on'));el.classList.add('on');}
+function setSz(el){strokeSz=+el.dataset.s;document.querySelectorAll('.so').forEach(s=>s.classList.remove('on'));el.classList.add('on');}
+
+// ═══════════════════════════════════════════════════════
+// UNDO / REDO
+// ═══════════════════════════════════════════════════════
+function snap(){return{d:JSON.parse(JSON.stringify(drawings)),e:JSON.parse(JSON.stringify(elements))};}
+function saveState(){undoStack.push(snap());if(undoStack.length>60)undoStack.shift();redoStack=[];}
+function undo(){if(!undoStack.length)return toast('Rien à annuler');redoStack.push(snap());const s=undoStack.pop();drawings=s.d;elements=s.e;selEl=null;updateSelHud();redraw();}
+function redo(){if(!redoStack.length)return toast('Rien à rétablir');undoStack.push(snap());const s=redoStack.pop();drawings=s.d;elements=s.e;selEl=null;updateSelHud();redraw();}
+
+// ═══════════════════════════════════════════════════════
+// SELECTION HUD
+// ═══════════════════════════════════════════════════════
+function updateSelHud(){document.getElementById('selHud').classList.toggle('show',!!selEl);}
+function delSel(){if(!selEl)return;saveState();elements=elements.filter(e=>e!==selEl);selEl=null;updateSelHud();redraw();}
+function rotSel(){if(!selEl)return;saveState();selEl.rot=(selEl.rot||0)+Math.PI/4;redraw();}
+function dupSel(){if(!selEl)return;saveState();const c=JSON.parse(JSON.stringify(selEl));c.x+=32;c.y+=32;elements.push(c);selEl=c;redraw();}
+
+// ═══════════════════════════════════════════════════════
+// POINTER EVENTS
+// ═══════════════════════════════════════════════════════
+function getPos(e){const r=canvas.getBoundingClientRect();const s=e.touches?e.touches[0]:e.changedTouches?e.changedTouches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
+function setupEvents(){
+  canvas.addEventListener('mousedown', onDown); canvas.addEventListener('touchstart', onDown,{passive:false});
+  canvas.addEventListener('mousemove', onMove); canvas.addEventListener('touchmove',  onMove,{passive:false});
+  canvas.addEventListener('mouseup',   onUp);   canvas.addEventListener('touchend',   onUp);
+  canvas.addEventListener('mouseleave',onUp);
+  canvas.addEventListener('dblclick',()=>{if(tool==='select'&&selEl)rotSel();});
+}
+function onDown(e){
+  e.preventDefault();
+  const p=getPos(e); isDrawing=true; dragging=false; sx=p.x; sy=p.y; lx=p.x; ly=p.y;
+  if(tool==='select'){
+    let hit=null;
+    for(let i=elements.length-1;i>=0;i--){const el=elements[i],s=(el.sz||50)*.62;if(Math.abs(el.x-p.x)<s&&Math.abs(el.y-p.y)<s){hit=el;break;}}
+    if(hit!==selEl){selEl=hit;updateSelHud();redraw();}
+    if(selEl){dragOX=p.x-selEl.x;dragOY=p.y-selEl.y;dragging=true;}
+    return;
+  }
+  if(tool==='pen'){saveState();curPath=[{x:p.x,y:p.y}];return;}
+  if(tool==='erase'){saveState();eraseAt(p.x,p.y);return;}
+  if(tool==='number'){
+    saveState();
+    drawings.push({t:'step',x:p.x,y:p.y,n:stepCounter,color:drawColor});
+    stepCounter++;
+    redraw();return;
+  }
+  // text handled in onUp to avoid prompt blocking draw pipeline
+}
+function onMove(e){
+  e.preventDefault();if(!isDrawing)return;
+  const p=getPos(e);
+  if(tool==='select'&&dragging&&selEl){selEl.x=p.x-dragOX;selEl.y=p.y-dragOY;redraw();return;}
+  if(tool==='pen'){curPath.push({x:p.x,y:p.y});ctx.strokeStyle=drawColor;ctx.lineWidth=strokeSz;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;return;}
+  if(tool==='erase'){eraseAt(p.x,p.y);return;}
+  redraw();preview(p.x,p.y);
+}
+function onUp(e){
+  if(!isDrawing)return;isDrawing=false;dragging=false;
+  const src=e.changedTouches?e.changedTouches[0]:e;
+  const r=canvas.getBoundingClientRect();
+  const p={x:src.clientX-r.left,y:src.clientY-r.top};
+  if(tool==='select'||tool==='number')return;
+  if(tool==='text'){
+    // small movement threshold = deliberate click, not drag
+    if(Math.hypot(p.x-sx,p.y-sy)<12){
+      saveState();
+      const txt=prompt('Entrez votre texte :','');
+      if(txt&&txt.trim()){drawings.push({t:'text',x:sx,y:sy,txt:txt.trim(),color:drawColor,sz:strokeSz});}
+      redraw();
+    }
+    return;
+  }
+  if(tool==='pen'){if(curPath.length>1)drawings.push({t:'pen',path:curPath,color:drawColor,sz:strokeSz});curPath=[];redraw();return;}
+  if(Math.hypot(p.x-sx,p.y-sy)<4)return;
+  saveState();
+  if(tool==='road')       drawings.push({t:'road',x1:sx,y1:sy,x2:p.x,y2:p.y,lanes:Math.max(1,Math.round(strokeSz/2))});
+  else if(tool==='roadcurve') drawings.push({t:'roadcurve',x1:sx,y1:sy,x2:p.x,y2:p.y,lanes:Math.max(1,Math.round(strokeSz/2))});
+  else if(tool==='arrow')     drawings.push({t:'arrow',x1:sx,y1:sy,x2:p.x,y2:p.y,color:drawColor,sz:strokeSz,dash:false});
+  else if(tool==='dasharrow') drawings.push({t:'arrow',x1:sx,y1:sy,x2:p.x,y2:p.y,color:drawColor,sz:strokeSz,dash:true});
+  else if(tool==='zone')      drawings.push({t:'rect',x:Math.min(sx,p.x),y:Math.min(sy,p.y),w:Math.abs(p.x-sx),h:Math.abs(p.y-sy),color:drawColor,fill:fillColor,sz:strokeSz});
+  else if(tool==='circle')    drawings.push({t:'circle',x:sx,y:sy,r:Math.hypot(p.x-sx,p.y-sy),color:drawColor,fill:fillColor,sz:strokeSz});
+  redraw();
+}
+
+// ═══════════════════════════════════════════════════════
+// PREVIEW
+// ═══════════════════════════════════════════════════════
+function preview(mx,my){
+  ctx.save();ctx.globalAlpha=.6;
+  const l=Math.max(1,Math.round(strokeSz/2));
+  if(tool==='road')           drawRoad(sx,sy,mx,my,l);
+  else if(tool==='roadcurve') drawRoadCurve(sx,sy,mx,my,l);
+  else if(tool==='arrow')     drawArrow(sx,sy,mx,my,drawColor,strokeSz,false);
+  else if(tool==='dasharrow') drawArrow(sx,sy,mx,my,drawColor,strokeSz,true);
+  else if(tool==='zone'){
+    const rx=Math.min(sx,mx),ry=Math.min(sy,my),rw=Math.abs(mx-sx),rh=Math.abs(my-sy);
+    if(fillColor!=='none'){ctx.fillStyle=fillColor;ctx.fillRect(rx,ry,rw,rh);}
+    ctx.strokeStyle=drawColor;ctx.lineWidth=strokeSz;ctx.setLineDash([6,4]);ctx.strokeRect(rx,ry,rw,rh);ctx.setLineDash([]);
+  } else if(tool==='circle'){
+    const r=Math.hypot(mx-sx,my-sy);
+    if(fillColor!=='none'){ctx.fillStyle=fillColor;ctx.beginPath();ctx.arc(sx,sy,r,0,Math.PI*2);ctx.fill();}
+    ctx.strokeStyle=drawColor;ctx.lineWidth=strokeSz;ctx.beginPath();ctx.arc(sx,sy,r,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+// ERASE
+// ═══════════════════════════════════════════════════════
+function eraseAt(x,y){
+  const r=strokeSz*10;
+  elements=elements.filter(el=>Math.hypot(el.x-x,el.y-y)>(el.sz||50)*.5+r*.3);
+  drawings=drawings.filter(d=>{
+    if(d.t==='pen')return!d.path.some(p=>Math.hypot(p.x-x,p.y-y)<r);
+    if(d.t==='text')return Math.hypot(d.x-x,d.y-y)>r+24;
+    if(d.t==='step')return Math.hypot(d.x-x,d.y-y)>r+20;
+    if(['road','roadcurve','arrow'].includes(d.t))return!segNear(d.x1,d.y1,d.x2,d.y2,x,y,r);
+    if(d.t==='rect')return!(x>d.x-r&&x<d.x+d.w+r&&y>d.y-r&&y<d.y+d.h+r);
+    if(d.t==='circle')return Math.abs(Math.hypot(d.x-x,d.y-y)-d.r)>r;
+    return true;
+  });
+  redraw();
+}
+function segNear(x1,y1,x2,y2,px,py,r){const dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy;let t=l2?((px-x1)*dx+(py-y1)*dy)/l2:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))<r;}
+
+// ═══════════════════════════════════════════════════════
+// ROAD PRIMITIVES
+// ═══════════════════════════════════════════════════════
+// ── helpers ──────────────────────────────────────────
+function roadGrad(x1,y1,x2,y2,lw){
+  // perpendicular gradient for road edges
+  const ang=Math.atan2(y2-y1,x2-x1);
+  const nx=Math.sin(ang)*lw/2, ny=-Math.cos(ang)*lw/2;
+  const gx=(x1+x2)/2, gy=(y1+y2)/2;
+  const g=ctx.createLinearGradient(gx-nx,gy-ny,gx+nx,gy+ny);
+  g.addColorStop(0,'#4a4a4c');
+  g.addColorStop(.06,'#2e2e30');
+  g.addColorStop(.5,'#3a3a3c');
+  g.addColorStop(.94,'#2e2e30');
+  g.addColorStop(1,'#4a4a4c');
+  return g;
+}
+function drawRoad(x1,y1,x2,y2,lanes){
+  const lw=lanes*60+14, ang=Math.atan2(y2-y1,x2-x1);
+  const ox=Math.sin(ang), oy=-Math.cos(ang);
+  ctx.save(); ctx.lineCap='square';
+  // ① trottoir / accotement (beige clair)
+  ctx.strokeStyle='#c8bfb0'; ctx.lineWidth=lw+28;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // ② sous-couche ombre (bord sombre)
+  ctx.strokeStyle='#1a1a1b'; ctx.lineWidth=lw+6;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // ③ chaussée avec dégradé
+  ctx.strokeStyle=roadGrad(x1,y1,x2,y2,lw); ctx.lineWidth=lw;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // ④ bordures blanches (lignes de rives)
+  const edgeOff=lw/2-3;
+  ctx.strokeStyle='rgba(240,235,220,.9)'; ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x1+ox*edgeOff,y1+oy*edgeOff);ctx.lineTo(x2+ox*edgeOff,y2+oy*edgeOff);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x1-ox*edgeOff,y1-oy*edgeOff);ctx.lineTo(x2-ox*edgeOff,y2-oy*edgeOff);ctx.stroke();
+  // ⑤ marquages centraux
+  if(lanes===1){
+    // axe pointillé blanc simple
+    ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=2; ctx.setLineDash([22,16]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke(); ctx.setLineDash([]);
+  } else {
+    // ligne centrale jaune continue (séparation sens)
+    ctx.strokeStyle='#f5c800'; ctx.lineWidth=3.5; ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    // lignes de voies blanches pointillées
+    for(let l=1;l<lanes;l++){
+      if(l===lanes/2) continue; // skip center (already drawn)
+      const off=(l/lanes-.5)*lw;
+      ctx.strokeStyle='rgba(255,255,255,.65)'; ctx.lineWidth=2.2; ctx.setLineDash([20,18]);
+      ctx.beginPath();
+      ctx.moveTo(x1+ox*off*2,y1+oy*off*2);
+      ctx.lineTo(x2+ox*off*2,y2+oy*off*2);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+function drawRoadCurve(x1,y1,x2,y2,lanes){
+  const mx=(x1+x2)/2,my=(y1+y2)/2,cpx=mx-(y2-y1)*.42,cpy=my+(x2-x1)*.42,lw=lanes*60+14;
+  ctx.save(); ctx.lineCap='round';
+  const path=()=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cpx,cpy,x2,y2);};
+  ctx.strokeStyle='#c8bfb0'; ctx.lineWidth=lw+28; path(); ctx.stroke();
+  ctx.strokeStyle='#1a1a1b'; ctx.lineWidth=lw+6;  path(); ctx.stroke();
+  ctx.strokeStyle='#3a3a3c'; ctx.lineWidth=lw;    path(); ctx.stroke();
+  ctx.strokeStyle='rgba(240,235,220,.9)'; ctx.lineWidth=3; path(); ctx.stroke();
+  if(lanes>=2){
+    ctx.strokeStyle='#f5c800'; ctx.lineWidth=3.5; ctx.setLineDash([]);
+    path(); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+function drawArrow(x1,y1,x2,y2,color,sz,dash){
+  const ang=Math.atan2(y2-y1,x2-x1),hl=16+sz*3.5;
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=sz+1;ctx.lineCap='round';
+  if(dash)ctx.setLineDash([12,9]);
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-Math.cos(ang)*hl,y2-Math.sin(ang)*hl);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-Math.cos(ang-.42)*hl,y2-Math.sin(ang-.42)*hl);ctx.lineTo(x2-Math.cos(ang)*hl*.52,y2-Math.sin(ang)*hl*.52);ctx.lineTo(x2-Math.cos(ang+.42)*hl,y2-Math.sin(ang+.42)*hl);ctx.closePath();ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════
+// ELEMENT PLACEMENT
+// ═══════════════════════════════════════════════════════
+function placeEl(icon,label){
+  saveState();
+  const el={icon,label,x:W/2+(Math.random()-.5)*120,y:H/2+(Math.random()-.5)*90,sz:52,rot:0};
+  elements.push(el);selEl=el;updateSelHud();setTool('select');redraw();
+  toast(label+' ajouté');if(isMob())closeSb();
+}
+function placeS(type){
+  saveState();
+  const label=SLBLS[type]||type;
+  const el={special:type,label,x:W/2+(Math.random()-.5)*120,y:H/2+(Math.random()-.5)*90,sz:62,rot:0};
+  elements.push(el);selEl=el;updateSelHud();setTool('select');redraw();
+  toast(label+' ajouté');if(isMob())closeSb();
+}
+const SLBLS={
+  sign_prio_route:'Route prioritaire',sign_cede:'Cédez',sign_stop:'STOP',sign_prio_droite:'Priorité à droite',
+  sign_st_andre:'Priorité à droite',
+  passage_pieton:'Passage piéton',
+  sign_gira:'Giratoire',sign_cede_gira:"Cédez à l'entrée",
+  park_ok:'Stationnement ✓',park_no:'Stationnement ✗',park_handicap:'PMR',park_payant:'Payant',
+  meca_moteur:'Moteur',meca_boite:'Boîte',meca_embrayage:'Embrayage',meca_frein:'Frein',
+  meca_pneu:'Roue',meca_batterie:'Batterie',meca_angle_mort:'Angle mort'
+};
+
+// ═══════════════════════════════════════════════════════
+// REDRAW
+// ═══════════════════════════════════════════════════════
+function redraw(){
+  ctx.clearRect(0,0,W,H);
+  // Fond canvas : asphalte clair hors route, léger grain
+  const bgG=ctx.createLinearGradient(0,0,0,H);
+  bgG.addColorStop(0,'#e8e4dc');bgG.addColorStop(1,'#ddd8ce');
+  ctx.fillStyle=bgG;ctx.fillRect(0,0,W,H);
+  if(showGrid)drawGrid();
+  drawings.forEach(renderD);
+  elements.forEach(renderEl);
+  if(selEl)drawSel(selEl);
+}
+function drawIntersectionBox(x,y,hw){
+  // Revêtement de carrefour avec texture asphalte améliorée
+  const ig=ctx.createRadialGradient(x-hw*.2,y-hw*.2,hw*.1,x,y,hw*1.6);
+  ig.addColorStop(0,'#484848');ig.addColorStop(.5,'#3c3c3e');ig.addColorStop(1,'#2e2e30');
+  ctx.fillStyle=ig;ctx.fillRect(x-hw,y-hw,hw*2,hw*2);
+  // Marquage de stop — ligne d'arrêt blanche sur chaque branche
+  ctx.strokeStyle='rgba(240,235,220,.8)';ctx.lineWidth=4;ctx.setLineDash([]);
+  [[x-hw,y-hw,x+hw,y-hw],[x-hw,y+hw,x+hw,y+hw],[x-hw,y-hw,x-hw,y+hw],[x+hw,y-hw,x+hw,y+hw]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  });
+  // Léger vignettage aux coins
+  const cg=ctx.createRadialGradient(x,y,hw*.5,x,y,hw*1.5);
+  cg.addColorStop(0,'rgba(0,0,0,0)');cg.addColorStop(1,'rgba(0,0,0,.18)');
+  ctx.fillStyle=cg;ctx.fillRect(x-hw,y-hw,hw*2,hw*2);
+}
+
+function renderD(d){
+  ctx.save();
+  if(d.t==='scene_inter'){
+    // Re-draw intersection fill square
+    drawIntersectionBox(d.x,d.y,d.hw);
+    if(d.hilite){ctx.fillStyle='rgba(240,128,0,.12)';ctx.fillRect(d.x-d.hw,d.y+d.hw,d.hw*2,d.h2);ctx.strokeStyle='#f08000';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);ctx.strokeRect(d.x-d.hw,d.y+d.hw,d.hw*2,d.h2-1);ctx.setLineDash([]);}
+  }
+  else if(d.t==='scene_inter_T'){
+    drawIntersectionBox(d.x,d.y-d.hw/2,d.hw*.6);
+  }
+  else if(d.t==='scene_gira'){
+    drawGira(d.cx,d.cy,d.rInner,d.laneW,d.laneCount);
+    if(d.laneCount===3){
+      const {cx,cy,rInner:R,laneW:lw}=d;
+      [R+lw*.5,R+lw*1.5,R+lw*2.5].forEach((rv,i)=>{
+        ctx.fillStyle='rgba(255,255,255,.88)';ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(cx+rv,cy,15,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#333';ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('V'+(i+1),cx+rv,cy);
+      });
+      ctx.fillStyle='#555';ctx.font='600 9px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText('V1=intérieure  V2=médiane  V3=extérieure',cx-R-lw*3,cy+R+lw*3+14);
+    }
+  }
+  else if(d.t==='scene_chain'){
+    drawChain(d.cx,d.cy);
+  }
+  else if(d.t==='scene_clutch'){
+    drawClutch(d.cx,d.cy,d.state);
+  }
+  else if(d.t==='pen'){ctx.strokeStyle=d.color;ctx.lineWidth=d.sz;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(d.path[0].x,d.path[0].y);d.path.forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();}
+  else if(d.t==='road')       drawRoad(d.x1,d.y1,d.x2,d.y2,d.lanes);
+  else if(d.t==='roadcurve')  drawRoadCurve(d.x1,d.y1,d.x2,d.y2,d.lanes);
+  else if(d.t==='arrow')      drawArrow(d.x1,d.y1,d.x2,d.y2,d.color,d.sz,d.dash);
+  else if(d.t==='rect'){
+    if(d.fill&&d.fill!=='none'){ctx.fillStyle=d.fill;ctx.fillRect(d.x,d.y,d.w,d.h);}
+    if(d.sz>0){ctx.strokeStyle=d.color;ctx.lineWidth=d.sz;ctx.strokeRect(d.x,d.y,d.w,d.h);}
+  }
+  else if(d.t==='circle'){
+    if(d.fill&&d.fill!=='none'){ctx.fillStyle=d.fill;ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();}
+    ctx.strokeStyle=d.color;ctx.lineWidth=d.sz;ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.stroke();
+  }
+  else if(d.t==='text'){ctx.font=`bold ${14+d.sz*2.5}px -apple-system,sans-serif`;ctx.fillStyle=d.color;ctx.textBaseline='top';ctx.fillText(d.txt,d.x,d.y);}
+  else if(d.t==='step'){
+    // Numéro procédural : cercle coloré + chiffre blanc
+    const r=18+strokeSz*1.5;
+    ctx.fillStyle=d.color;
+    ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font=`bold ${r*1.1}px -apple-system,sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(String(d.n),d.x,d.y+1);
+  }
+  ctx.restore();
+}
+function renderEl(el){
+  ctx.save();ctx.translate(el.x,el.y);if(el.rot)ctx.rotate(el.rot);
+  if(el.special)drawSpecial(el);
+  else{ctx.font=`${el.sz||52}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(el.icon,0,0);}
+  if(el.label){ctx.font=`600 11px -apple-system,sans-serif`;ctx.fillStyle='rgba(20,20,22,.82)';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(el.label,0,(el.sz||52)*.52+2);}
+  ctx.restore();
+}
+function drawSel(el){
+  const s=(el.sz||52)*.64+10;
+  ctx.save();ctx.translate(el.x,el.y);if(el.rot)ctx.rotate(el.rot);
+  ctx.strokeStyle='#0a7aff';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.strokeRect(-s,-s,s*2,s*2);ctx.setLineDash([]);
+  ctx.fillStyle='#0a7aff';ctx.beginPath();ctx.arc(0,-s-14,7,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+// SPECIAL ELEMENTS
+// ═══════════════════════════════════════════════════════
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+function diamond(r){ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r,0);ctx.lineTo(0,r);ctx.lineTo(-r,0);ctx.closePath();}
+function drawSpecial(el){
+  const s=el.sz||62,t=el.special;
+  if(t==='sign_prio_route'){ctx.fillStyle='#f5c800';ctx.strokeStyle='#2a2a2a';ctx.lineWidth=3;diamond(s*.44);ctx.fill();ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=2;diamond(s*.28);ctx.stroke();}
+  else if(t==='sign_cede'){ctx.fillStyle='#fff';ctx.strokeStyle='#cc0000';ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(0,s*.46);ctx.lineTo(-s*.44,-s*.36);ctx.lineTo(s*.44,-s*.36);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#cc0000';ctx.font=`bold ${s*.38}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('▽',0,s*.04);}
+  else if(t==='sign_stop'){const r=s*.43;ctx.fillStyle='#cc0000';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/8;ctx.lineTo(r*Math.cos(a),r*Math.sin(a));}ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font=`bold ${s*.26}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('STOP',0,1);}
+  else if(t==='sign_prio_droite'){ctx.fillStyle='rgba(10,122,255,.1)';ctx.strokeStyle='#0a7aff';ctx.lineWidth=2;rr(ctx,-s*.42,-s*.42,s*.84,s*.84,8);ctx.fill();ctx.stroke();const hl=14+s*.06;ctx.strokeStyle='#0a7aff';ctx.fillStyle='#0a7aff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-s*.32,0);ctx.lineTo(s*.16,0);ctx.stroke();ctx.beginPath();ctx.moveTo(s*.32,0);ctx.lineTo(s*.32-hl*Math.cos(-.4),-hl*Math.sin(-.4));ctx.lineTo(s*.32-hl*.52,0);ctx.lineTo(s*.32-hl*Math.cos(.4),-hl*Math.sin(.4));ctx.closePath();ctx.fill();ctx.strokeStyle='#cc0000';ctx.fillStyle='#cc0000';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(0,s*.22);ctx.lineTo(0,0);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(0,-s*.28);ctx.lineTo(-8,-s*.14);ctx.lineTo(8,-s*.14);ctx.closePath();ctx.fill();}
+  else if(t==='sign_st_andre'){
+    // Triangle blanc bordure rouge + croix de Saint-André rouge à l'intérieur
+    const h=s*.86, hw=s*.5;
+    ctx.fillStyle='#fff';ctx.strokeStyle='#cc0000';ctx.lineWidth=3.5;
+    ctx.beginPath();ctx.moveTo(0,-h*.62);ctx.lineTo(-hw,h*.38);ctx.lineTo(hw,h*.38);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    // Croix de Saint-André (X) rouge à l'intérieur du triangle
+    const cx2=0,cy2=h*.04,arm=h*.3;
+    ctx.strokeStyle='#cc0000';ctx.lineWidth=s*.09;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(cx2-arm,cy2-arm*.7);ctx.lineTo(cx2+arm,cy2+arm*.7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx2+arm,cy2-arm*.7);ctx.lineTo(cx2-arm,cy2+arm*.7);ctx.stroke();
+  }
+  else if(t==='passage_pieton'){
+    // Rectangle zébré blanc/noir vue de dessus
+    const pw=s*.8, ph=s*.55, stripes=5;
+    // Fond gris clair (trottoir)
+    ctx.fillStyle='rgba(180,175,165,.5)';
+    ctx.fillRect(-pw/2-8,-ph/2-8,pw+16,ph+16);
+    // Bandes blanches
+    const sw=pw/stripes;
+    for(let i=0;i<stripes;i++){
+      ctx.fillStyle = i%2===0 ? '#fff' : '#3a3a3c';
+      ctx.fillRect(-pw/2+i*sw,-ph/2,sw,ph);
+    }
+    // Contour
+    ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.5;
+    ctx.strokeRect(-pw/2,-ph/2,pw,ph);
+    // Silhouette piéton stylisée au centre
+    ctx.fillStyle='rgba(10,122,255,.85)';
+    // tête
+    ctx.beginPath();ctx.arc(0,-ph*.28,ph*.1,0,Math.PI*2);ctx.fill();
+    // corps
+    ctx.strokeStyle='rgba(10,122,255,.85)';ctx.lineWidth=ph*.07;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(0,-ph*.16);ctx.lineTo(0,ph*.12);ctx.stroke();
+    // bras
+    ctx.beginPath();ctx.moveTo(-ph*.14,-ph*.04);ctx.lineTo(ph*.14,-ph*.04);ctx.stroke();
+    // jambes
+    ctx.beginPath();ctx.moveTo(0,ph*.12);ctx.lineTo(-ph*.12,ph*.3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,ph*.12);ctx.lineTo(ph*.12,ph*.3);ctx.stroke();
+  }
+  else if(t==='sign_gira'){ctx.fillStyle='#0a7aff';ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,s*.42,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=3.5;ctx.lineCap='round';ctx.beginPath();ctx.arc(0,0,s*.22,-Math.PI*.75,Math.PI*.75,false);ctx.stroke();ctx.fillStyle='#fff';const ex=s*.22*Math.cos(Math.PI*.75),ey=s*.22*Math.sin(Math.PI*.75);ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-10,ey-10);ctx.lineTo(ex+8,ey-6);ctx.closePath();ctx.fill();}
+  else if(t==='sign_cede_gira'){ctx.fillStyle='#fffbe6';ctx.strokeStyle='#cc0000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,s*.44);ctx.lineTo(-s*.42,-s*.32);ctx.lineTo(s*.42,-s*.32);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#cc0000';ctx.font=`bold ${s*.13}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('CÉDEZ',0,-s*.06);ctx.fillText('ENTRÉE',0,s*.1);}
+  else if(t==='park_ok'){ctx.fillStyle='#0a7aff';ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,s*.42,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font=`bold ${s*.44}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('P',0,2);}
+  else if(t==='park_no'){ctx.fillStyle='#cc0000';ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,s*.42,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font=`bold ${s*.44}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('P',0,2);ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-s*.3,-s*.3);ctx.lineTo(s*.3,s*.3);ctx.stroke();}
+  else if(t==='park_handicap'){ctx.fillStyle='#0a7aff';ctx.beginPath();ctx.arc(0,0,s*.42,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=`${s*.44}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('♿',0,2);}
+  else if(t==='park_payant'){ctx.fillStyle='#30b94a';ctx.strokeStyle='#fff';ctx.lineWidth=2;rr(ctx,-s*.4,-s*.36,s*.8,s*.72,9);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font=`bold ${s*.34}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('P€',0,2);}
+  else if(t==='meca_moteur'){ctx.fillStyle='rgba(100,100,110,.12)';ctx.strokeStyle='#636366';ctx.lineWidth=2.5;rr(ctx,-s*.4,-s*.3,s*.8,s*.6,7);ctx.fill();ctx.stroke();ctx.fillStyle='#636366';for(let i=-1;i<=1;i+=2){ctx.fillRect(i*s*.2-8,-s*.36,16,10);ctx.fillRect(i*s*.2-6,-s*.24,12,20);}ctx.fillStyle='#333';ctx.font=`700 ${s*.15}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('MOTEUR',0,s*.16);}
+  else if(t==='meca_boite'){ctx.fillStyle='rgba(100,100,110,.1)';ctx.strokeStyle='#636366';ctx.lineWidth=2;rr(ctx,-s*.42,-s*.28,s*.84,s*.56,6);ctx.fill();ctx.stroke();const pos=[[-s*.26,-s*.12],[0,-s*.12],[s*.26,-s*.12],[-s*.26,s*.1],[0,s*.1],[s*.26,s*.1]];pos.forEach(([px,py],i)=>{ctx.fillStyle='#636366';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='700 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(i===5?'R':i+1,px,py);});ctx.fillStyle='#333';ctx.font=`700 ${s*.13}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText('BOÎTE',0,s*.3);}
+  else if(t==='meca_embrayage'){ctx.strokeStyle='#0a7aff';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(s*.15,-s*.38);ctx.lineTo(s*.15,s*.18);ctx.lineTo(-s*.28,s*.38);ctx.stroke();ctx.fillStyle='rgba(10,122,255,.18)';ctx.strokeStyle='#0a7aff';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(-s*.08,s*.06,s*.22,s*.07,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(-s*.08,s*.14,s*.22,s*.07,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(t==='meca_frein'){ctx.fillStyle='rgba(204,0,0,.1)';ctx.strokeStyle='#cc0000';ctx.lineWidth=3.5;ctx.beginPath();ctx.arc(0,0,s*.4,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#cc0000';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,s*.24,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(204,0,0,.65)';ctx.fillRect(-s*.12,-s*.46,s*.24,s*.1);ctx.fillStyle='#cc0000';ctx.font=`700 ${s*.15}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('FREIN',0,s*.1);}
+  else if(t==='meca_pneu'){ctx.strokeStyle='#1c1c1e';ctx.lineWidth=s*.1;ctx.beginPath();ctx.arc(0,0,s*.38,0,Math.PI*2);ctx.stroke();ctx.fillStyle='rgba(200,200,210,.85)';ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*.22,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#999';ctx.lineWidth=2;for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(s*.22*Math.cos(a),s*.22*Math.sin(a));ctx.stroke();}}
+  else if(t==='meca_batterie'){ctx.fillStyle='#1c1c1e';ctx.strokeStyle='#333';ctx.lineWidth=2;rr(ctx,-s*.38,-s*.3,s*.76,s*.6,6);ctx.fill();ctx.stroke();ctx.fillStyle='#cc0000';ctx.fillRect(-s*.28,-s*.38,s*.16,s*.1);ctx.fillStyle='#444';ctx.fillRect(s*.12,-s*.38,s*.16,s*.1);ctx.fillStyle='#f5c800';ctx.font=`bold ${s*.34}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚡',0,s*.04);}
+  else if(t==='meca_angle_mort'){ctx.fillStyle='rgba(232,50,30,.2)';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,s*.46,Math.PI*.02,Math.PI*.72);ctx.closePath();ctx.fill();ctx.strokeStyle='#e8321e';ctx.lineWidth=2.5;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,s*.46,Math.PI*.02,Math.PI*.72);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#e8321e';ctx.font=`700 ${s*.15}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('ANGLE',0,-s*.04);ctx.fillText('MORT',0,s*.1);ctx.font=`${s*.3}px serif`;ctx.textBaseline='bottom';ctx.fillText('🚗',0,s*.5);}
+}
+
+// ═══════════════════════════════════════════════════════
+// GRID
+// ═══════════════════════════════════════════════════════
+function drawGrid(){
+  const step=48;ctx.strokeStyle='rgba(0,0,0,.05)';ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.strokeStyle='rgba(0,0,0,.09)';ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+}
+function toggleGrid(){showGrid=!showGrid;document.getElementById('btnGrid').classList.toggle('on',showGrid);redraw();}
+
+// ═══════════════════════════════════════════════════════
+// GIRATOIRE
+// ═══════════════════════════════════════════════════════
+function drawGira(cx,cy,rInner,laneW,laneCount){
+  const rOuter=rInner+laneW*laneCount;
+  // ① Grande zone verte (paysage)
+  const rLandscape=rOuter+52;
+  const gGround=ctx.createRadialGradient(cx,cy,rInner*.6,cx,cy,rLandscape);
+  gGround.addColorStop(0,'#7ab648');
+  gGround.addColorStop(.4,'#5a9e2f');
+  gGround.addColorStop(1,'#4a8a22');
+  ctx.fillStyle=gGround;
+  ctx.beginPath();ctx.arc(cx,cy,rLandscape,0,Math.PI*2);ctx.fill();
+
+  // ② Accotement (anneau beige)
+  ctx.fillStyle='#c8bfb0';
+  ctx.beginPath();ctx.arc(cx,cy,rOuter+18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3a3a3c';
+  ctx.beginPath();ctx.arc(cx,cy,rOuter+14,0,Math.PI*2);ctx.fill();
+
+  // ③ Chaussée giratoire par voies (de l'extérieur vers l'intérieur)
+  for(let l=laneCount-1;l>=0;l--){
+    const rMid=rInner+laneW*l+laneW/2;
+    const g=ctx.createRadialGradient(cx,cy,rMid-laneW*.4,cx,cy,rMid+laneW*.4);
+    g.addColorStop(0,'#2e2e30');g.addColorStop(.5,'#3c3c3e');g.addColorStop(1,'#2a2a2c');
+    ctx.strokeStyle=g; ctx.lineWidth=laneW;
+    ctx.beginPath();ctx.arc(cx,cy,rMid,0,Math.PI*2);ctx.stroke();
+  }
+
+  // ④ Ligne de rive extérieure blanche
+  ctx.strokeStyle='rgba(240,235,220,.95)'; ctx.lineWidth=3.5;
+  ctx.beginPath();ctx.arc(cx,cy,rOuter,0,Math.PI*2);ctx.stroke();
+
+  // ⑤ Séparations de voies (tirets jaunes)
+  if(laneCount>1){
+    for(let l=1;l<laneCount;l++){
+      const rm=rInner+laneW*l;
+      ctx.strokeStyle='rgba(245,200,0,.85)'; ctx.lineWidth=2.5; ctx.setLineDash([14,12]);
+      ctx.beginPath();ctx.arc(cx,cy,rm,0,Math.PI*2);ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  // ⑥ Ligne de rive intérieure blanche
+  ctx.strokeStyle='rgba(240,235,220,.95)'; ctx.lineWidth=3.5;
+  ctx.beginPath();ctx.arc(cx,cy,rInner,0,Math.PI*2);ctx.stroke();
+
+  // ⑦ Îlot central (belle végétation)
+  const gIsland=ctx.createRadialGradient(cx,cy,0,cx,cy,rInner);
+  gIsland.addColorStop(0,'#8ecf50');gIsland.addColorStop(.6,'#6ab832');gIsland.addColorStop(1,'#4a8a22');
+  ctx.fillStyle=gIsland;
+  ctx.beginPath();ctx.arc(cx,cy,rInner,0,Math.PI*2);ctx.fill();
+  // bordure île
+  ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.arc(cx,cy,rInner,0,Math.PI*2);ctx.stroke(); ctx.setLineDash([]);
+  // Petits arbres sur l'île (cercles verts foncés)
+  const numTrees=Math.max(3,Math.floor(rInner/18));
+  for(let i=0;i<numTrees;i++){
+    const a=i*Math.PI*2/numTrees;
+    const tr=rInner*.52;
+    const tx=cx+tr*Math.cos(a), ty=cy+tr*Math.sin(a);
+    const tg=ctx.createRadialGradient(tx,ty,0,tx,ty,rInner*.15);
+    tg.addColorStop(0,'#5aaa28');tg.addColorStop(1,'#2d6610');
+    ctx.fillStyle=tg;
+    ctx.beginPath();ctx.arc(tx,ty,rInner*.13,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(tx,ty,rInner*.13,0,Math.PI*2);ctx.stroke();
+  }
+
+  // ⑧ Flèches de circulation (jaunes, bien visibles)
+  for(let lane=0;lane<laneCount;lane++){
+    const rAr=rInner+laneW*(lane+.5);
+    [Math.PI*.25,Math.PI*.75,Math.PI*1.25,Math.PI*1.75].forEach(a=>{
+      const bx=cx+rAr*Math.cos(a), by=cy+rAr*Math.sin(a);
+      const ex=cx+rAr*Math.cos(a-Math.PI*.15), ey=cy+rAr*Math.sin(a-Math.PI*.15);
+      const ag=Math.atan2(ey-by,ex-bx), hl=14;
+      ctx.strokeStyle='rgba(255,240,40,.95)'; ctx.fillStyle='rgba(255,240,40,.95)'; ctx.lineWidth=3.5;
+      ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ex-Math.cos(ag)*hl,ey-Math.sin(ag)*hl);ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex,ey);
+      ctx.lineTo(ex-Math.cos(ag-.45)*hl,ey-Math.sin(ag-.45)*hl);
+      ctx.lineTo(ex-Math.cos(ag)*hl*.5,ey-Math.sin(ag)*hl*.5);
+      ctx.lineTo(ex-Math.cos(ag+.45)*hl,ey-Math.sin(ag+.45)*hl);
+      ctx.closePath();ctx.fill();
+    });
+  }
+
+  // ⑨ Ombres douces sous la chaussée
+  ctx.save();
+  const shadow=ctx.createRadialGradient(cx,cy,rOuter+2,cx,cy,rOuter+22);
+  shadow.addColorStop(0,'rgba(0,0,0,.22)');shadow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shadow;
+  ctx.beginPath();ctx.arc(cx,cy,rOuter+22,0,Math.PI*2);ctx.arc(cx,cy,rOuter+2,0,Math.PI*2,true);ctx.fill();
+  ctx.restore();
+}
+function addApproach(cx,cy,R,lanes,angle,len){drawings.push({t:'road',x1:cx+R*Math.cos(angle),y1:cy+R*Math.sin(angle),x2:cx+(R+len)*Math.cos(angle),y2:cy+(R+len)*Math.sin(angle),lanes});}
+
+// ═══════════════════════════════════════════════════════
+// CINEMATIC CHAIN
+// ═══════════════════════════════════════════════════════
+function drawChain(cx,cy){
+  // Fond de page légèrement quadrillé (style schéma technique)
+  ctx.fillStyle='#f8f6f2';ctx.fillRect(0,0,W,H);
+  for(let gx=0;gx<W;gx+=30){ctx.strokeStyle='rgba(0,0,0,.04)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
+  for(let gy=0;gy<H;gy+=30){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+
+  const comps=[
+    {id:'mot',label:'MOTEUR',        sub:'Énergie thermique\n↓ couple',     w:108,col:'#e05c00',bg:'#fff4ee'},
+    {id:'emb',label:'EMBRAYAGE',     sub:'Découplage\n↓ transmission',      w:94, col:'#0a7aff',bg:'#eef5ff'},
+    {id:'bvt',label:'BOÎTE DE\nVITESSES',sub:'Démultiplication\n↓ rapport', w:118,col:'#30b94a',bg:'#eefff2'},
+    {id:'arb',label:'ARBRE DE\nTRANSMISSION',sub:'Transmission\n↓ couple',  w:112,col:'#f08000',bg:'#fff8ee'},
+    {id:'dif',label:'DIFFÉRENTIEL',  sub:'Partage couple\n↓ roues',         w:118,col:'#9b59b6',bg:'#f8eeff'},
+  ];
+  const bH=92,gap=18,totalW=comps.reduce((s,c)=>s+c.w,0)+gap*(comps.length-1);
+  let curX=cx-totalW/2; const pos=[];
+  comps.forEach(c=>{pos.push({...c,x:curX+c.w/2,y:cy});curX+=c.w+gap;});
+
+  // ── Arbres de transmission (tubes métalliques) ──
+  pos.slice(0,-1).forEach((a,i)=>{
+    const b=pos[i+1];
+    const x1=a.x+a.w/2, x2=b.x-b.w/2;
+    // tube
+    const g=ctx.createLinearGradient(x1,(cy)-8,x1,cy+8);
+    g.addColorStop(0,'#bbb');g.addColorStop(.4,'#eee');g.addColorStop(1,'#888');
+    ctx.fillStyle=g;
+    ctx.fillRect(x1,cy-5,x2-x1,10);
+    // filet central
+    ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x1,cy);ctx.lineTo(x2,cy);ctx.stroke();
+    // flèche de flux
+    const mx=(x1+x2)/2;
+    ctx.fillStyle=a.col;
+    ctx.beginPath();ctx.moveTo(mx+11,cy);ctx.lineTo(mx-1,cy-7);ctx.lineTo(mx-1,cy+7);ctx.closePath();ctx.fill();
+  });
+
+  // ── Roues motrices ──
+  const dif=pos[pos.length-1];
+  [-1,1].forEach((dir,idx)=>{
+    const wy=cy+dir*105;
+    // arbre vertical
+    const g2=ctx.createLinearGradient(dif.x-5,wy,dif.x+5,wy);
+    g2.addColorStop(0,'#888');g2.addColorStop(.5,'#ddd');g2.addColorStop(1,'#888');
+    ctx.fillStyle=g2; ctx.fillRect(dif.x-5,Math.min(cy,wy),10,Math.abs(wy-cy));
+    // flèche
+    ctx.fillStyle=dif.col;
+    ctx.beginPath();ctx.moveTo(dif.x,wy+dir*2);ctx.lineTo(dif.x-8,wy-dir*10);ctx.lineTo(dif.x+8,wy-dir*10);ctx.closePath();ctx.fill();
+    // roue
+    ctx.save();ctx.translate(dif.x,wy);
+    const rg=ctx.createRadialGradient(-8,-8,4,0,0,26);
+    rg.addColorStop(0,'#555');rg.addColorStop(.6,'#1a1a1a');rg.addColorStop(1,'#000');
+    ctx.fillStyle=rg; ctx.beginPath();ctx.arc(0,0,26,0,Math.PI*2);ctx.fill();
+    const rg2=ctx.createRadialGradient(-3,-3,2,0,0,16);
+    rg2.addColorStop(0,'#e0ddd8');rg2.addColorStop(1,'#9a9890');
+    ctx.fillStyle=rg2; ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;
+    for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(14*Math.cos(a),14*Math.sin(a));ctx.stroke();}
+    ctx.fillStyle='#444';ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(idx===0?'G':'D',0,0);
+    ctx.restore();
+    ctx.fillStyle='#555';ctx.font='600 9px sans-serif';ctx.textAlign='center';ctx.textBaseline=dir<0?'bottom':'top';
+    ctx.fillText('ROUE '+(idx===0?'GAUCHE':'DROITE'),dif.x,wy+dir*32);
+  });
+
+  // ── Boîtes ──
+  pos.forEach(c=>{
+    // ombre portée
+    ctx.fillStyle='rgba(0,0,0,.1)';rr(ctx,c.x-c.w/2+4,cy-bH/2+5,c.w,bH,12);ctx.fill();
+    // fond avec dégradé
+    const bg=ctx.createLinearGradient(c.x-c.w/2,cy-bH/2,c.x+c.w/2,cy+bH/2);
+    bg.addColorStop(0,c.bg);bg.addColorStop(1,'#fff');
+    ctx.fillStyle=bg; ctx.strokeStyle=c.col; ctx.lineWidth=2.5;
+    rr(ctx,c.x-c.w/2,cy-bH/2,c.w,bH,12);ctx.fill();ctx.stroke();
+    // Bande couleur en haut de la boîte
+    ctx.fillStyle=c.col;ctx.globalAlpha=.18;
+    ctx.beginPath();ctx.moveTo(c.x-c.w/2+12,cy-bH/2);ctx.lineTo(c.x+c.w/2-12,cy-bH/2);
+    ctx.quadraticCurveTo(c.x+c.w/2,cy-bH/2,c.x+c.w/2,cy-bH/2+12);
+    ctx.lineTo(c.x+c.w/2,cy-bH/2+22);ctx.lineTo(c.x-c.w/2,cy-bH/2+22);
+    ctx.lineTo(c.x-c.w/2,cy-bH/2+12);ctx.quadraticCurveTo(c.x-c.w/2,cy-bH/2,c.x-c.w/2+12,cy-bH/2);
+    ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+
+    // Icône spécifique
+    ctx.fillStyle=c.col;
+    if(c.id==='mot'){
+      // pistons stylisés
+      [-22,0,22].forEach(ox=>{
+        ctx.fillStyle=c.col;ctx.globalAlpha=.6;
+        ctx.fillRect(c.x+ox-5,cy-28,10,22);ctx.globalAlpha=1;
+        ctx.strokeStyle=c.col;ctx.lineWidth=2;
+        ctx.strokeRect(c.x+ox-7,cy-32,14,8);
+      });
+      ctx.strokeStyle=c.col;ctx.lineWidth=3;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(c.x-30,cy-8);ctx.lineTo(c.x,cy-22);ctx.lineTo(c.x+30,cy-8);ctx.stroke();
+    }
+    if(c.id==='emb'){
+      // 2 disques séparés/rapprochés
+      [-10,4].forEach((oy,i)=>{
+        ctx.fillStyle=c.col;ctx.globalAlpha=i===0?.9:.5;
+        ctx.beginPath();ctx.ellipse(c.x,cy+oy,28,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      });
+    }
+    if(c.id==='bvt'){
+      const gpos=[[-24,-10],[0,-10],[24,-10],[-24,8],[0,8]];
+      gpos.forEach(([gx,gy],i)=>{
+        ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(c.x+gx,cy+gy,7,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(i===4?'R':i+1,c.x+gx,cy+gy);
+      });
+      ctx.strokeStyle=c.col;ctx.lineWidth=1.5;ctx.globalAlpha=.4;
+      [[0,1],[1,2],[3,4],[0,3],[1,4]].forEach(([a,b])=>{
+        ctx.beginPath();ctx.moveTo(c.x+gpos[a][0],cy+gpos[a][1]);ctx.lineTo(c.x+gpos[b][0],cy+gpos[b][1]);ctx.stroke();
+      });
+      ctx.globalAlpha=1;
+    }
+    if(c.id==='arb'){
+      ctx.strokeStyle=c.col;ctx.lineWidth=5;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(c.x-32,cy-4);ctx.lineTo(c.x+32,cy-4);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(c.x-32,cy-4);ctx.lineTo(c.x-20,cy-14);ctx.lineTo(c.x-8,cy+6);ctx.lineTo(c.x+8,cy-14);ctx.lineTo(c.x+20,cy+6);ctx.lineTo(c.x+32,cy-4);ctx.stroke();
+    }
+    if(c.id==='dif'){
+      ctx.fillStyle=c.col;ctx.globalAlpha=.2;ctx.beginPath();ctx.arc(c.x,cy-8,22,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=c.col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(c.x,cy-8,22,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle=c.col;ctx.lineWidth=1.5;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.beginPath();ctx.moveTo(c.x+14*Math.cos(a),cy-8+14*Math.sin(a));ctx.lineTo(c.x+22*Math.cos(a),cy-8+22*Math.sin(a));ctx.stroke();}
+    }
+    // Labels
+    ctx.fillStyle='#1a1a1c';ctx.font=`700 ${Math.min(11,c.w*.088)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    c.label.split('\n').forEach((ln,i,arr)=>ctx.fillText(ln,c.x,cy+26+i*13-((arr.length-1)*6)));
+    ctx.fillStyle=c.col;ctx.font='500 9px sans-serif';ctx.textBaseline='top';
+    c.sub.split('\n').forEach((ln,i)=>ctx.fillText(ln,c.x,cy+bH/2+4+i*11));
+  });
+
+  // ── Titre ──
+  ctx.fillStyle='rgba(0,0,0,.06)';ctx.fillRect(0,0,W,52);
+  ctx.fillStyle='#1a1a1c';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Chaîne cinématique — du moteur aux roues motrices',cx,28);
+  ctx.fillStyle='#636366';ctx.font='500 11px sans-serif';
+  ctx.fillText('Moteur  →  Embrayage  →  Boîte de vitesses  →  Arbre de transmission  →  Différentiel  →  Roues',cx,46);
+}
+
+// ═══════════════════════════════════════════════════════
+// EMBRAYAGE (3 états)
+// ═══════════════════════════════════════════════════════
+function drawClutch(cx,cy,state){
+  const colors={debraye:'#d32f2f',patinage:'#e65100',embraye:'#2e7d32'};
+  const col=colors[state];
+  const labels={debraye:'EMBRAYAGE DÉBRAYÉ',patinage:'POINT DE PATINAGE',embraye:'EMBRAYAGE EMBRAYÉ'};
+  const descs={
+    debraye:'Pédale enfoncée à fond — transmission interrompue',
+    patinage:'Pédale mi-course — glissement partiel — couple progressif',
+    embraye:'Pédale relâchée — disques solidaires — couple total transmis'
+  };
+
+  // ── Fond technique ────────────────────────
+  ctx.fillStyle='#f5f3ef';ctx.fillRect(0,0,W,H);
+  // quadrillage technique léger
+  ctx.strokeStyle='rgba(0,0,0,.04)';ctx.lineWidth=1;
+  for(let gx=0;gx<W;gx+=24){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
+  for(let gy=0;gy<H;gy+=24){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+
+  // ── Bandeau titre en haut ─────────────────
+  ctx.fillStyle=col;ctx.globalAlpha=.1;ctx.fillRect(0,0,W,64);ctx.globalAlpha=1;
+  ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,64);ctx.lineTo(W,64);ctx.stroke();
+  ctx.fillStyle=col;ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(labels[state],cx,22);
+  ctx.fillStyle='#555';ctx.font='13px sans-serif';
+  ctx.fillText(descs[state],cx,46);
+
+  // ── Paramètres géométriques ───────────────
+  const pedalX=cx-310, pedalPivotY=cy+20;
+  const diskR=70;
+  const volantX=cx+20, diskX=cx+130, platX=cx+230;
+  const axisY=cy;
+
+  // Angle de la pédale selon état
+  const pedAngle=state==='debraye'?0.9:state==='patinage'?0.45:0.12;
+  // Décalage du disque selon état (débrayé = écarté)
+  const diskGap=state==='debraye'?28:state==='patinage'?10:0;
+
+  // ── SECTION GAUCHE : Pédale + câble ──────
+  // Fond zone pédale
+  ctx.fillStyle='rgba(0,0,0,.03)';rr(ctx,pedalX-55,pedalPivotY-130,110,180,12);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.08)';ctx.lineWidth=1;rr(ctx,pedalX-55,pedalPivotY-130,110,180,12);ctx.stroke();
+
+  // Axe pivot (gris métal)
+  const pivG=ctx.createRadialGradient(pedalX-2,pedalPivotY-2,1,pedalX,pedalPivotY,10);
+  pivG.addColorStop(0,'#ccc');pivG.addColorStop(1,'#666');
+  ctx.fillStyle=pivG;ctx.beginPath();ctx.arc(pedalX,pedalPivotY,10,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#444';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(pedalX,pedalPivotY,10,0,Math.PI*2);ctx.stroke();
+
+  // Bras de pédale (tube métallique)
+  const pedEndX=pedalX-Math.sin(pedAngle)*100;
+  const pedEndY=pedalPivotY+Math.cos(pedAngle)*100;
+  const pedG=ctx.createLinearGradient(pedalX,pedalPivotY,pedEndX,pedEndY);
+  pedG.addColorStop(0,col);pedG.addColorStop(1,col+'99');
+  ctx.strokeStyle=pedG;ctx.lineWidth=12;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(pedalX,pedalPivotY);ctx.lineTo(pedEndX,pedEndY);ctx.stroke();
+
+  // Plateforme de pédale
+  const perpX=Math.cos(pedAngle)*22, perpY=Math.sin(pedAngle)*22;
+  ctx.fillStyle=col;ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(pedEndX-perpX-2,pedEndY-perpY);
+  ctx.lineTo(pedEndX+perpX+2,pedEndY+perpY);
+  ctx.lineTo(pedEndX+perpX,pedEndY+perpY+6);
+  ctx.lineTo(pedEndX-perpX,pedEndY-perpY+6);
+  ctx.closePath();ctx.fill();
+
+  // Pied stylisé
+  ctx.font='28px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(state==='embraye'?'🦶':'👟',pedEndX+(state==='debraye'?-8:4),pedEndY+(state==='debraye'?-16:-14));
+
+  // Étiquette pédale
+  ctx.fillStyle='#444';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('PÉDALE',pedalX,pedalPivotY+100);
+  ctx.fillStyle=col;ctx.font='bold 11px sans-serif';
+  ctx.fillText(state==='debraye'?'ENFONCÉE':state==='patinage'?'MI-COURSE':'RELÂCHÉE',pedalX,pedalPivotY+114);
+
+  // Câble de commande (ligne pointillée)
+  const cableY=pedalPivotY-40;
+  const cableStartX=pedalX+8;
+  const fourchX=volantX-diskR-48;
+  ctx.strokeStyle='#888';ctx.lineWidth=2.5;ctx.setLineDash([8,5]);
+  ctx.beginPath();ctx.moveTo(cableStartX,cableY);ctx.lineTo(fourchX,cableY);ctx.stroke();
+  ctx.setLineDash([]);
+  // flèche sur câble
+  const cableDir=state==='embraye'?1:-1;
+  ctx.fillStyle='#888';ctx.beginPath();
+  ctx.moveTo(fourchX-18,cableY);ctx.lineTo(fourchX-30,cableY-5);ctx.lineTo(fourchX-30,cableY+5);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#555';ctx.font='9px sans-serif';ctx.textAlign='center';
+  ctx.fillText('câble / tringlerie',(cableStartX+fourchX)/2,cableY-13);
+
+  // Fourchette
+  ctx.strokeStyle='#636366';ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(fourchX,cableY);ctx.lineTo(fourchX,axisY+diskR*.4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(fourchX-16,axisY+diskR*.3);ctx.lineTo(fourchX+16,axisY+diskR*.3);ctx.stroke();
+  ctx.fillStyle='#888';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillText('fourchette',fourchX,cableY-2);
+
+  // Arbre moteur entrant
+  const shaftG=ctx.createLinearGradient(0,axisY-5,0,axisY+5);
+  shaftG.addColorStop(0,'#ccc');shaftG.addColorStop(.4,'#eee');shaftG.addColorStop(1,'#999');
+  ctx.fillStyle=shaftG;ctx.fillRect(pedalX+60,axisY-5,volantX-diskR-pedalX-60,10);
+  ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1;ctx.strokeRect(pedalX+60,axisY-5,volantX-diskR-pedalX-60,10);
+  ctx.fillStyle='#555';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillText('arbre moteur',(pedalX+60+volantX-diskR)/2,axisY-6);
+
+  // ── SECTION CENTRALE : Mécanisme embrayage ──
+  // Volant moteur (côté moteur)
+  const volG=ctx.createRadialGradient(volantX-diskR*0.15,axisY-diskR*0.15,diskR*0.1,volantX-diskR*0.2,axisY-diskR*0.2,diskR*1.1);
+  volG.addColorStop(0,'#888');volG.addColorStop(.5,'#555');volG.addColorStop(1,'#333');
+  ctx.fillStyle=volG;ctx.beginPath();ctx.arc(volantX-diskR,axisY,diskR,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(volantX-diskR,axisY,diskR,0,Math.PI*2);ctx.stroke();
+  // Rayons du volant
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4;
+    ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(volantX-diskR+diskR*.2*Math.cos(a),axisY+diskR*.2*Math.sin(a));
+    ctx.lineTo(volantX-diskR+diskR*.85*Math.cos(a),axisY+diskR*.85*Math.sin(a));ctx.stroke();
+  }
+  // Moyeu volant
+  const hubG=ctx.createRadialGradient(volantX-diskR-3,axisY-3,2,volantX-diskR,axisY,18);
+  hubG.addColorStop(0,'#bbb');hubG.addColorStop(1,'#555');
+  ctx.fillStyle=hubG;ctx.beginPath();ctx.arc(volantX-diskR,axisY,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('VM',volantX-diskR,axisY);
+  ctx.fillStyle='#ccc';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('VOLANT MOTEUR',volantX-diskR,axisY+diskR+6);
+
+  // Garnitures de friction (sur le volant, côté disque)
+  ctx.fillStyle='rgba(80,60,40,.6)';
+  ctx.beginPath();ctx.arc(volantX-diskR,axisY,diskR,-.3,0.3);ctx.arc(volantX-diskR,axisY,diskR*.72,.3,-.3,true);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.arc(volantX-diskR,axisY,diskR,-Math.PI+.3,-Math.PI-.3,true);ctx.arc(volantX-diskR,axisY,diskR*.72,-Math.PI-.3,-Math.PI+.3).closePath;ctx.fill();
+
+  // Disque d'embrayage (avec décalage selon état)
+  const dX=diskX+diskGap;
+  const diskFill=state==='embraye'?'rgba(46,125,50,.15)':state==='patinage'?'rgba(230,81,0,.12)':'rgba(211,47,47,.08)';
+  ctx.fillStyle=diskFill;ctx.strokeStyle=col;ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(dX,axisY,diskR*.88,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // Moyeu disque (splines)
+  const hubD=ctx.createRadialGradient(dX-3,axisY-3,3,dX,axisY,diskR*.28);
+  hubD.addColorStop(0,'#ccc');hubD.addColorStop(1,'#777');
+  ctx.fillStyle=hubD;ctx.beginPath();ctx.arc(dX,axisY,diskR*.28,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1;
+  for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.beginPath();ctx.moveTo(dX,axisY);ctx.lineTo(dX+diskR*.28*Math.cos(a),axisY+diskR*.28*Math.sin(a));ctx.stroke();}
+  // Ressorts amortisseurs du disque
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3+Math.PI/6;
+    const r1=diskR*.34,r2=diskR*.72;
+    ctx.fillStyle=col+'aa';
+    ctx.beginPath();
+    ctx.arc(dX+((r1+r2)/2)*Math.cos(a),axisY+((r1+r2)/2)*Math.sin(a),diskR*.07,0,Math.PI*2);
+    ctx.fill();
+  }
+  // Garnitures friction du disque (segments)
+  for(let i=0;i<3;i++){
+    const a0=i*Math.PI*2/3, a1=a0+Math.PI*2/3-.15;
+    ctx.fillStyle='rgba(80,60,40,.5)';
+    ctx.beginPath();ctx.arc(dX,axisY,diskR*.86,a0+.08,a1);
+    ctx.arc(dX,axisY,diskR*.72,a1,a0+.08,true);ctx.closePath();ctx.fill();
+  }
+  ctx.fillStyle=col;ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('DISQUE D\'EMBRAYAGE',dX,axisY+diskR+6);
+
+  // Plateau de pression
+  const platFill=ctx.createLinearGradient(platX-22,0,platX+22,0);
+  platFill.addColorStop(0,'#aaa');platFill.addColorStop(.4,'#ddd');platFill.addColorStop(1,'#888');
+  ctx.fillStyle=platFill;
+  ctx.beginPath();ctx.arc(platX,axisY,diskR*.9,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#777';ctx.lineWidth=2;ctx.beginPath();ctx.arc(platX,axisY,diskR*.9,0,Math.PI*2);ctx.stroke();
+  // Rainures du plateau
+  ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1.5;
+  [diskR*.25,diskR*.5,diskR*.72].forEach(r=>{ctx.beginPath();ctx.arc(platX,axisY,r,0,Math.PI*2);ctx.stroke();});
+  // Picots ressorts (couvercle)
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;const px=platX+diskR*.62*Math.cos(a),py=axisY+diskR*.62*Math.sin(a);
+    ctx.fillStyle='#999';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.fillStyle='#555';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('PLATEAU DE PRESSION',platX,axisY+diskR+6);
+
+  // ── Écart inter-disques selon état ────────
+  if(diskGap>0){
+    const gapMid=(volantX+dX-diskR*.88)/2-diskR*.05;
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(volantX,axisY-diskR*.5);ctx.lineTo(dX-diskR*.88,axisY-diskR*.5);ctx.stroke();
+    ctx.setLineDash([]);
+    // flèches d'écartement
+    [volantX+4,dX-diskR*.88-4].forEach((x,i)=>{
+      const dir=i===0?1:-1;
+      ctx.fillStyle=col;ctx.beginPath();
+      ctx.moveTo(x,axisY-diskR*.5);
+      ctx.lineTo(x-dir*12,axisY-diskR*.5-5);
+      ctx.lineTo(x-dir*12,axisY-diskR*.5+5);
+      ctx.closePath();ctx.fill();
+    });
+    const gapPx=Math.round(dX-diskR*.88-volantX);
+    ctx.fillStyle=col;ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText(state==='debraye'?'⟵  ÉCART  ⟶':'⟵ glissement ⟶',gapMid,axisY-diskR*.5-4);
+  }
+
+  // Arbre de boîte sortant
+  const shaftOut=platX+diskR*.9;
+  ctx.fillStyle=shaftG;ctx.fillRect(shaftOut,axisY-5,80,10);
+  ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1;ctx.strokeRect(shaftOut,axisY-5,80,10);
+  ctx.fillStyle='#555';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.textBaseline='bottom';
+  ctx.fillText('→ boîte de vitesses',shaftOut+4,axisY-7);
+
+  // Indicateur de flux de couple (→ avec animation statique)
+  const fluxItems=[
+    {x:pedalX+90,label:'MOTEUR',active:true},
+    {x:volantX-diskR*1.4,label:'',active:true},
+    {x:(volantX+dX)/2,label:state==='embraye'?'✅ COUPLE':'state==="patinage"?"⚡ PARTIEL":"⛔ INTERROMPU"',active:state!=='debraye'},
+    {x:platX+diskR+20,label:'BOÎTE',active:state!=='debraye'},
+  ];
+  // Ligne de flux en bas
+  const fluxY=cy+diskR+55;
+  ctx.strokeStyle=state==='embraye'?'#2e7d32':state==='patinage'?'#e65100':'rgba(100,100,100,.4)';
+  ctx.lineWidth=state==='embraye'?4:3;
+  if(state!=='debraye') ctx.setLineDash([]);
+  else ctx.setLineDash([6,6]);
+  ctx.beginPath();ctx.moveTo(pedalX+80,fluxY);ctx.lineTo(shaftOut+70,fluxY);ctx.stroke();
+  ctx.setLineDash([]);
+  if(state!=='debraye'){
+    // flèches de flux
+    [pedalX+200,pedalX+320,pedalX+440].forEach(fx=>{
+      if(fx>pedalX+80&&fx<shaftOut+70){
+        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(fx+8,fluxY);ctx.lineTo(fx-2,fluxY-5);ctx.lineTo(fx-2,fluxY+5);ctx.closePath();ctx.fill();
+      }
+    });
+  }
+  // Capsule état
+  const stateY=cy+diskR+85;
+  const stateW=300,stateH=34;
+  ctx.fillStyle=col;ctx.globalAlpha=.1;rr(ctx,cx-stateW/2,stateY-stateH/2,stateW,stateH,10);ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=col;ctx.lineWidth=2;rr(ctx,cx-stateW/2,stateY-stateH/2,stateW,stateH,10);ctx.stroke();
+  const stateTexts={
+    debraye:'⛔  TRANSMISSION INTERROMPUE — Pédale enfoncée',
+    patinage:'⚡  PATINAGE — Transmission partielle en cours',
+    embraye:'✅  EMBRAYÉ — Couple intégralement transmis'
+  };
+  ctx.fillStyle=col;ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(stateTexts[state],cx,stateY);
+}
+
+// ═══════════════════════════════════════════════════════
+// LOAD SCENE
+// ═══════════════════════════════════════════════════════
+function setTitle(t){document.getElementById('hudTitle').textContent=t;}
+function loadScene(name){
+  saveState();drawings=[];elements=[];selEl=null;updateSelHud();
+  const cx=W/2,cy=H/2;
+
+  if(name==='blank'){setTitle('Vierge');redraw();return;}
+
+  const hw=2*56/2+14; // intersection half-width for 2-lane road
+
+  if(name==='inter4'){
+    const hw2=hw;
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    drawings.push({t:'road',x1:cx,y1:0,x2:cx,y2:H,lanes:2});
+    drawings.push({t:'scene_inter',x:cx,y:cy,hw:hw2});
+    setTitle('Carrefour 4 voies');redraw();return;
+  }
+  if(name==='inter3_T_bas'){
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    drawings.push({t:'road',x1:cx,y1:H,x2:cx,y2:cy,lanes:2});
+    drawings.push({t:'scene_inter_T',x:cx,y:cy,hw});
+    setTitle('Carrefour T – route du bas');redraw();return;
+  }
+  if(name==='inter4_bas'){
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    drawings.push({t:'road',x1:cx,y1:0,x2:cx,y2:H,lanes:2});
+    drawings.push({t:'scene_inter',x:cx,y:cy,hw,hilite:true,h2:H-(cy+hw)});
+    setTitle('Carrefour 4 voies – axe bas');redraw();return;
+  }
+  if(name==='inter_prio_droite'){
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    drawings.push({t:'road',x1:cx,y1:0,x2:cx,y2:H,lanes:2});
+    drawings.push({t:'scene_inter',x:cx,y:cy,hw});
+    elements.push({icon:'🚗',label:'A',x:cx+260,y:cy-22,sz:48,rot:Math.PI});
+    elements.push({icon:'🚗',label:'B',x:cx-22, y:cy-260,sz:48,rot:Math.PI*.5});
+    setTitle('Priorité à droite');redraw();return;
+  }
+  if(name==='gira1'){
+    const R=Math.min(W,H)*.13,lw=Math.min(W,H)*.09;
+    [0,Math.PI/2,Math.PI,Math.PI*3/2].forEach(a=>addApproach(cx,cy,R+lw,1,a,Math.min(W,H)*.35));
+    drawings.push({t:'scene_gira',cx,cy,rInner:R,laneW:lw,laneCount:1});
+    setTitle('Giratoire 1 voie');redraw();return;
+  }
+  if(name==='gira2'){
+    const R=Math.min(W,H)*.12,lw=Math.min(W,H)*.075;
+    [0,Math.PI/2,Math.PI,Math.PI*3/2].forEach(a=>addApproach(cx,cy,R+lw*2,2,a,Math.min(W,H)*.35));
+    drawings.push({t:'scene_gira',cx,cy,rInner:R,laneW:lw,laneCount:2});
+    setTitle('Giratoire 2 voies');redraw();return;
+  }
+  if(name==='gira3'){
+    const R=Math.min(W,H)*.10,lw=Math.min(W,H)*.062;
+    [0,Math.PI/2,Math.PI,Math.PI*3/2].forEach(a=>addApproach(cx,cy,R+lw*3,3,a,Math.min(W,H)*.35));
+    drawings.push({t:'scene_gira',cx,cy,rInner:R,laneW:lw,laneCount:3});
+    setTitle('Giratoire 3 voies');redraw();return;
+  }
+  if(name==='park_bataille'){
+    const pw=68,ph=128,gp=7,cols=Math.floor((W-80)/(pw+gp));
+    drawings.push({t:'road',x1:0,y1:H-80,x2:W,y2:H-80,lanes:1});
+    drawings.push({t:'road',x1:0,y1:80,x2:W,y2:80,lanes:1});
+    for(let c=0;c<cols;c++){const px=40+c*(pw+gp);drawings.push({t:'rect',x:px,y:100,w:pw,h:ph,color:'rgba(0,112,232,.5)',fill:'rgba(0,112,232,.07)',sz:2});drawings.push({t:'rect',x:px,y:H-100-ph,w:pw,h:ph,color:'rgba(0,112,232,.5)',fill:'rgba(0,112,232,.07)',sz:2});}
+    for(let c=0;c<Math.min(5,cols);c+=2)elements.push({icon:'🚗',label:'',x:40+c*(pw+gp)+pw/2,y:100+ph/2,sz:38,rot:Math.PI*.5});
+    setTitle('Stationnement en bataille');redraw();return;
+  }
+  if(name==='park_creneau'){
+    const pw=88,ph=42,gp=10,cols=Math.floor((W-80)/(pw+gp));
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    for(let c=0;c<cols;c++){const px=40+c*(pw+gp);drawings.push({t:'rect',x:px,y:cy-58-ph,w:pw,h:ph,color:'rgba(0,112,232,.5)',fill:'rgba(0,112,232,.07)',sz:2});drawings.push({t:'rect',x:px,y:cy+58,w:pw,h:ph,color:'rgba(0,112,232,.5)',fill:'rgba(0,112,232,.07)',sz:2});}
+    for(let c=0;c<Math.min(6,cols);c+=2)elements.push({icon:'🚗',label:'',x:40+c*(pw+gp)+pw/2,y:cy-58-ph/2,sz:32,rot:0});
+    setTitle('Stationnement en créneau');redraw();return;
+  }
+  if(name==='park_epi'){
+    drawings.push({t:'road',x1:0,y1:H-80,x2:W,y2:H-80,lanes:1});
+    drawings.push({t:'rect',x:0,y:H-80-130,w:W,h:130,color:'rgba(0,112,232,.06)',fill:'rgba(0,112,232,.06)',sz:0});
+    const count=Math.floor((W-60)/58);
+    for(let i=0;i<=count;i++){const px=40+i*58;drawings.push({t:'pen',path:[{x:px,y:H-80-115*Math.cos(Math.PI/4)},{x:px+115*Math.sin(Math.PI/4),y:H-80}],color:'rgba(0,112,232,.55)',sz:2});}
+    for(let c=0;c<Math.min(5,count);c+=2)elements.push({icon:'🚗',label:'',x:50+c*58+22,y:H-80-58,sz:36,rot:Math.PI/4});
+    setTitle('Stationnement en épi');redraw();return;
+  }
+  if(name==='meca_chaine'){drawings.push({t:'scene_chain',cx,cy});setTitle('Chaîne cinématique');redraw();return;}
+  if(name==='emb_debraye') {drawings.push({t:'scene_clutch',cx,cy,state:'debraye'});  setTitle('Embrayage débrayé');    redraw();return;}
+  if(name==='emb_patinage'){drawings.push({t:'scene_clutch',cx,cy,state:'patinage'}); setTitle('Point de patinage');    redraw();return;}
+  if(name==='emb_embraye') {drawings.push({t:'scene_clutch',cx,cy,state:'embraye'});  setTitle('Embrayage embrayé');    redraw();return;}
+  if(name==='meca_vue'){
+    const vw=W*.48,vh=H*.62,vx=cx-vw/2,vy=cy-vh/2;
+    drawings.push({t:'rect',x:vx,y:vy,w:vw,h:vh,color:'#636366',fill:'rgba(100,100,110,.08)',sz:3});
+    [{x:vx-6,y:vy+28},{x:vx+vw-6,y:vy+28},{x:vx-6,y:vy+vh-28},{x:vx+vw-6,y:vy+vh-28}].forEach(p=>drawings.push({t:'rect',x:p.x-22,y:p.y-38,w:26,h:76,color:'#1c1c1e',fill:'#2c2c2e',sz:4}));
+    elements.push({special:'meca_moteur', label:'Moteur',   x:cx,      y:vy+100,    sz:76,rot:0});
+    elements.push({special:'meca_boite',  label:'Boîte',    x:cx,      y:vy+230,    sz:68,rot:0});
+    [{label:'Frein AV G',x:vx+36,y:vy+48},{label:'Frein AV D',x:vx+vw-36,y:vy+48},{label:'Frein AR G',x:vx+36,y:vy+vh-48},{label:'Frein AR D',x:vx+vw-36,y:vy+vh-48}].forEach(p=>elements.push({special:'meca_frein',label:p.label,x:p.x,y:p.y,sz:50,rot:0}));
+    elements.push({special:'meca_batterie',label:'Batterie',x:vx-90,y:cy-50,sz:58,rot:0});
+    setTitle('Vue mécanique dessus');redraw();return;
+  }
+  if(name==='urban'){
+    drawings.push({t:'rect',x:0,y:cy-88,w:W,h:22,color:'rgba(180,170,155,.8)',fill:'rgba(180,170,155,.8)',sz:0});
+    drawings.push({t:'rect',x:0,y:cy+66,w:W,h:22,color:'rgba(180,170,155,.8)',fill:'rgba(180,170,155,.8)',sz:0});
+    drawings.push({t:'road',x1:0,y1:cy,x2:W,y2:cy,lanes:2});
+    [{x:20,w:110,h:100},{x:160,w:90,h:115},{x:W-150,w:115,h:95},{x:W-300,w:90,h:88}].forEach(b=>drawings.push({t:'rect',x:b.x,y:cy-88-b.h,w:b.w,h:b.h,color:'#aaa',fill:'rgba(165,165,175,.4)',sz:2}));
+    setTitle('Zone urbaine');redraw();return;
+  }
+  if(name==='highway'){
+    drawings.push({t:'rect',x:0,y:0,w:W,h:cy-62,color:'rgba(100,160,70,.25)',fill:'rgba(100,160,70,.25)',sz:0});
+    drawings.push({t:'rect',x:0,y:cy+62,w:W,h:H-cy-62,color:'rgba(100,160,70,.25)',fill:'rgba(100,160,70,.25)',sz:0});
+    drawings.push({t:'road',x1:0,y1:cy-30,x2:W,y2:cy-30,lanes:1});
+    drawings.push({t:'road',x1:0,y1:cy+30,x2:W,y2:cy+30,lanes:1});
+    drawings.push({t:'arrow',x1:80,y1:cy-30,x2:W-80,y2:cy-30,color:'#30b94a',sz:3,dash:false});
+    drawings.push({t:'arrow',x1:W-80,y1:cy+30,x2:80,y2:cy+30,color:'#30b94a',sz:3,dash:false});
+    setTitle('Route nationale');redraw();return;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MISC
+// ═══════════════════════════════════════════════════════
+function clearAll(){if(confirm('Effacer tout ?')){saveState();drawings=[];elements=[];selEl=null;updateSelHud();redraw();}}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity=1;clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity=0,2400);}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT – canvas partagé
+// ═══════════════════════════════════════════════════════
+function buildExportCanvas(){
+  // Render clean canvas (no selection handles)
+  const prev=selEl;selEl=null;updateSelHud();redraw();
+  const pad=30,headerH=44,footerH=22;
+  const oc=document.createElement('canvas');
+  oc.width=W+pad*2; oc.height=H+pad*2+headerH+footerH;
+  const oc2=oc.getContext('2d');
+  // White background
+  oc2.fillStyle='#ffffff';oc2.fillRect(0,0,oc.width,oc.height);
+  // Header
+  oc2.fillStyle='#1c1c1e';oc2.fillRect(0,0,oc.width,headerH);
+  oc2.fillStyle='#fff';oc2.font='bold 15px -apple-system,sans-serif';oc2.textBaseline='middle';oc2.textAlign='center';
+  oc2.fillText('SRRR — '+document.getElementById('hudTitle').textContent,oc.width/2,headerH/2);
+  // Schema
+  oc2.drawImage(canvas,pad,headerH+pad/2);
+  // Border
+  oc2.strokeStyle='rgba(0,0,0,.1)';oc2.lineWidth=1.5;oc2.strokeRect(pad,headerH+pad/2,W,H);
+  // Footer
+  oc2.fillStyle='#78787e';oc2.font='10px -apple-system,sans-serif';oc2.textAlign='right';oc2.textBaseline='bottom';
+  oc2.fillText('SRRR – Schémas Routiers Pédagogiques  •  '+new Date().toLocaleDateString('fr-FR'),oc.width-pad,oc.height-4);
+  selEl=prev;updateSelHud();redraw();
+  return oc;
+}
+
+// ── Utilitaire téléchargement ─────────────────────────
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+}
+
+// ── PNG ──────────────────────────────────────────────
+function exportPNG() {
+  try {
+    const oc = buildExportCanvas();
+    oc.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, 'schema_SRRR.png');
+      toast('✓ PNG téléchargé');
+    }, 'image/png');
+  } catch(e) { toast('❌ Erreur PNG : ' + e.message); }
+}
+
+// ── PDF via impression navigateur (100% compatible) ──
+// Ouvre une page HTML optimisée pour impression PDF
+function exportPDF() {
+  try {
+    const oc = buildExportCanvas();
+    const title = document.getElementById('hudTitle').textContent;
+    // On utilise JPEG pour réduire la taille
+    const imgData = oc.toDataURL('image/jpeg', 0.92);
+    const date = new Date().toLocaleDateString('fr-FR');
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>SRRR – ${title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: A4 landscape; margin: 10mm; }
+    body { background: #fff; font-family: Arial, sans-serif; }
+    .page {
+      width: 277mm; height: 190mm;
+      display: flex; flex-direction: column;
+      padding: 0;
+    }
+    .header {
+      background: #1c1c1e; color: #fff;
+      padding: 6px 12px; font-size: 12pt; font-weight: bold;
+      flex-shrink: 0;
+    }
+    .img-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 4mm; overflow: hidden;
+    }
+    img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain; display: block;
+    }
+    .footer {
+      font-size: 7pt; color: #888; text-align: right;
+      padding: 3px 12px; flex-shrink: 0;
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">SRRR — ${title}</div>
+    <div class="img-wrap"><img src="${imgData}" alt="schéma"></div>
+    <div class="footer">SRRR – Schémas Routiers Pédagogiques &nbsp;•&nbsp; ${date}</div>
+  </div>
+  <scri' + `pt>
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 400);
+    });
+  </scri` + 'pt>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(r){console.log('SW ok',r.scope);})
+      .catch(function(e){console.log('SW err',e);});
+  });
+}
+</script>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'width=1000,height=700');
+    if (!win) {
+      // Popup bloqué — fallback : lien direct
+      triggerDownload(url, 'schema_SRRR_print.html');
+      toast('⚠️ Popup bloquée — ouvrez le fichier téléchargé puis imprimez (Ctrl+P → Enregistrer PDF)');
+    } else {
+      toast('📄 Fenêtre d\'impression ouverte → Enregistrer en PDF');
+    }
+  } catch(e) { toast('❌ Erreur PDF : ' + e.message); }
+}
+
+// ── Word (.doc) ───────────────────────────────────────
+function exportWord() {
+  try {
+    const oc = buildExportCanvas();
+    const title = document.getElementById('hudTitle').textContent;
+    const date = new Date().toLocaleDateString('fr-FR');
+    // PNG en base64 intégré directement dans le HTML Word
+    const imgData = oc.toDataURL('image/png');
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:w="urn:schemas-microsoft-com:office:word"
+  xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <meta name="ProgId" content="Word.Document">
+  <title>${title}</title>
+  <!--[if gte mso 9]><xml>
+    <w:WordDocument><w:Orientation>Landscape</w:Orientation></w:WordDocument>
+  </xml><![endif]-->
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1cm; }
+    h1 { font-size: 14pt; color: #1c1c1e; margin-bottom: 8pt; }
+    img { max-width: 25cm; display: block; }
+    .ft { font-size: 8pt; color: #888; margin-top: 8pt; text-align: right; }
+    @page { size: A4 landscape; margin: 1cm; }
+  </style>
+</head>
+<body>
+  <h1>SRRR — ${title}</h1>
+  <img src="${imgData}">
+  <p class="ft">SRRR – Schémas Routiers Pédagogiques &nbsp;•&nbsp; ${date}</p>
+</body>
+</html>`;
+
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-word;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    triggerDownload(url, 'schema_SRRR.doc');
+    toast('✓ Fichier Word téléchargé (.doc)');
+  } catch(e) { toast('❌ Erreur Word : ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════════════════
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
